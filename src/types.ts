@@ -36,6 +36,15 @@ export interface WorkspaceConfig {
   localDev?: boolean;
 }
 
+export interface PipelineItem {
+  id: string;
+  name: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  type: 'gltf' | 'texture' | 'animation';
+  timestamp: string;
+}
+
 export interface AgentLog {
   id: string;
   timestamp: number;

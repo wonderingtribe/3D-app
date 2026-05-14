@@ -90,6 +90,7 @@ CAPABILITIES:
 - can WRITE and mutate any file in the workspace.
 - can RUN any shell command (terminal).
 - can UPDATE workspace configuration (layout, panels, features).
+- can OBSERVE the glTF asset pipeline status.
 
 WORKSPACE CONTEXT:
 - Files: ${JSON.stringify(context.files.map((f: any) => f.path))}

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig } from './types';
+import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem } from './types';
 import { io, Socket } from 'socket.io-client';
 import { askAgent } from './services/geminiService';
 
@@ -38,6 +38,7 @@ interface WorkspaceContextType {
   isAgentThinking: boolean;
   targetUrl: string;
   config: WorkspaceConfig;
+  pipelineItems: PipelineItem[];
   
   setFiles: (files: FileNode[]) => void;
   openFile: (path: string) => Promise<void>;
@@ -54,6 +55,7 @@ interface WorkspaceContextType {
   setProvider: (provider: string) => void;
   executeAgentTask: (prompt: string) => Promise<void>;
   updateConfig: (config: Partial<WorkspaceConfig>) => void;
+  addPipelineItem: (item: Omit<PipelineItem, 'id' | 'timestamp' | 'status' | 'progress'>) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -72,6 +74,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [targetUrl, setTargetUrl] = useState('https://dreammakerhub.website');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [config, setConfig] = useState<WorkspaceConfig>(DEFAULT_CONFIG);
+  const [pipelineItems, setPipelineItems] = useState<PipelineItem[]>([]);
 
   const refreshFiles = useCallback(async () => {
     const res = await fetch('/api/files');
@@ -140,6 +143,18 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const sendTerminalCommand = (command: string) => {
+    if (command.startsWith('/')) {
+      const [cmd, ...args] = command.split(' ');
+      if (cmd === '/clone' && args.length > 0) {
+        executeAgentTask(`Clone the repository from ${args[0]} into a subdirectory called 'external-source'. Then analyze the project structure.`);
+        return;
+      }
+      if (cmd === '/build') {
+        executeAgentTask(`Run the build command for the project in 'external-source' and copy the output to the 'generated-editors/local-workspace' directory.`);
+        return;
+      }
+    }
+    
     if (socket) {
       socket.emit('terminal-input', command);
     }
@@ -214,11 +229,36 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
+  const addPipelineItem = (item: Omit<PipelineItem, 'id' | 'timestamp' | 'status' | 'progress'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newItem: PipelineItem = {
+      ...item,
+      id,
+      timestamp: new Date().toLocaleTimeString(),
+      status: 'pending',
+      progress: 0
+    };
+    
+    setPipelineItems(prev => [newItem, ...prev]);
+
+    // Simulate pipeline processing
+    setTimeout(() => {
+      setPipelineItems(prev => prev.map(i => i.id === id ? { ...i, status: 'processing', progress: 30 } : i));
+      setTimeout(() => {
+        setPipelineItems(prev => prev.map(i => i.id === id ? { ...i, progress: 65 } : i));
+        setTimeout(() => {
+          setPipelineItems(prev => prev.map(i => i.id === id ? { ...i, status: 'completed', progress: 100 } : i));
+          addAgentLog(`Pipeline complete: ${item.name} successfully imported.`, 'success');
+        }, 1500);
+      }, 1000);
+    }, 500);
+  };
+
   return (
     <WorkspaceContext.Provider value={{
-      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, activeModel, activeProvider, isAgentThinking, targetUrl, config,
+      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, activeModel, activeProvider, isAgentThinking, targetUrl, config, pipelineItems,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
-      setViewMode, setSidebarOpen, setTargetUrl, setModel: setActiveModel, setProvider: setActiveProvider, executeAgentTask, updateConfig
+      setViewMode, setSidebarOpen, setTargetUrl, setModel: setActiveModel, setProvider: setActiveProvider, executeAgentTask, updateConfig, addPipelineItem
     }}>
       {children}
     </WorkspaceContext.Provider>

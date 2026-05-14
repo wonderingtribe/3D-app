@@ -23,6 +23,14 @@ async function startServer() {
 
   const PORT = 3000;
 
+  // Ensure workspace directory exists
+  const workspaceDir = path.join(process.cwd(), "generated-editors");
+  try {
+    await fs.mkdir(workspaceDir, { recursive: true });
+  } catch (err) {
+    console.error("Failed to create workspace directory:", err);
+  }
+
   app.use(express.json());
 
   // API Routes
@@ -154,4 +162,7 @@ async function getFilesRecursive(dir: string, base: string = ""): Promise<any[]>
   return files;
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("FATAL: Server failed to start:", err);
+  process.exit(1);
+});

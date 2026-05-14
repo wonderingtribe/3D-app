@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Command, Terminal, Cpu, Search, Sparkles, Database, Github, Box, Zap } from 'lucide-react';
+import { Command, Terminal, Cpu, Search, Sparkles, Database, Github, Box, Zap, Layers } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 
 const COMMAND_LIST = [
   { cmd: '/config:reset', desc: 'Reset layout to defaults', icon: Zap },
   { cmd: '/theme:toggle', desc: 'Swap between light/dark themes', icon: Sparkles },
+  { cmd: '/pipeline', desc: 'Open asset processing pipeline', icon: Layers },
   { cmd: '/provider', desc: 'Switch AI provider', icon: Cpu },
   { cmd: '/model', desc: 'Select active model', icon: Sparkles },
   { cmd: '/deploy', desc: 'Deploy to OCI', icon: Database },

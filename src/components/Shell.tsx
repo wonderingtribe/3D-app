@@ -24,11 +24,12 @@ import AgentSidebar from './AgentSidebar';
 import CommandNexus from './CommandNexus';
 import WebView from './WebView';
 import ProjectSettings from './ProjectSettings';
+import GltfPipeline from './GltfPipeline';
 import { cn } from '../lib/utils';
 
 export default function Shell() {
   const { isSidebarOpen, setSidebarOpen, viewMode, setViewMode, isAgentThinking, executeAgentTask, config } = useWorkspace();
-  const [activeSidePanel, setActiveSidePanel] = useState<'files' | 'search' | 'github' | 'settings'>('files');
+  const [activeSidePanel, setActiveSidePanel] = useState<'files' | 'search' | 'github' | 'settings' | 'pipeline'>('files');
 
   const hasLeftPanel = config.panels.left.length > 0;
   const hasRightPanel = config.panels.right.length > 0;
@@ -107,6 +108,7 @@ export default function Shell() {
         {hasLeftPanel && (
           <aside className="w-12 border-r border-white/5 bg-black/20 flex flex-col items-center py-4 gap-4 z-40">
              {config.panels.left.includes('files') && <ActivityIconButton active={activeSidePanel === 'files'} onClick={() => { setActiveSidePanel('files'); setSidebarOpen(true); }} icon={FileCode} />}
+             <ActivityIconButton active={activeSidePanel === 'pipeline'} onClick={() => { setActiveSidePanel('pipeline'); setSidebarOpen(true); }} icon={Layers} />
              <ActivityIconButton active={activeSidePanel === 'search'} onClick={() => { setActiveSidePanel('search'); setSidebarOpen(true); }} icon={Search} />
              <ActivityIconButton active={activeSidePanel === 'github'} onClick={() => { setActiveSidePanel('github'); setSidebarOpen(true); }} icon={Github} />
              <div className="mt-auto flex flex-col gap-4 mb-2">
@@ -126,6 +128,7 @@ export default function Shell() {
             >
               <div className="h-full">
                 {activeSidePanel === 'files' && <FileExplorer />}
+                {activeSidePanel === 'pipeline' && <GltfPipeline />}
                 {activeSidePanel === 'settings' && <ProjectSettings />}
                 {activeSidePanel === 'search' && <div className="p-4 text-[10px] text-white/40 uppercase tracking-widest">Global Search</div>}
                 {activeSidePanel === 'github' && <div className="p-4 text-[10px] text-white/40 uppercase tracking-widest">Repository Sync</div>}
