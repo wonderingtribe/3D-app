@@ -1,0 +1,6 @@
+{
+  "name": "AetherOS: Autonomous AI & Spatial Hub",
+  "description": "A professional-grade AI-powered 3D development environment. Features autonomous NPC generation, character control, and full-stack project deployment capabilities.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}
