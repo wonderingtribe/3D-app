@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem } from './types';
+import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene } from './types';
 import { io, Socket } from 'socket.io-client';
 import { askAgent } from './services/geminiService';
 
@@ -22,7 +22,14 @@ const DEFAULT_CONFIG: WorkspaceConfig = {
   },
   skybox: "city",
   customEngineUrl: "",
-  localDev: false
+  localDev: false,
+  keys: {
+    openai: "",
+    gemini: "",
+    anthropic: "",
+    perplexity: "",
+    groq: ""
+  }
 };
 
 interface WorkspaceContextType {
@@ -39,6 +46,10 @@ interface WorkspaceContextType {
   targetUrl: string;
   config: WorkspaceConfig;
   pipelineItems: PipelineItem[];
+  entities: WorldEntity[];
+  prefabs: Prefab[];
+  scenes: Scene[];
+  currentSceneId: string | null;
   
   setFiles: (files: FileNode[]) => void;
   openFile: (path: string) => Promise<void>;
@@ -56,6 +67,14 @@ interface WorkspaceContextType {
   executeAgentTask: (prompt: string) => Promise<void>;
   updateConfig: (config: Partial<WorkspaceConfig>) => void;
   addPipelineItem: (item: Omit<PipelineItem, 'id' | 'timestamp' | 'status' | 'progress'>) => void;
+  setEntities: (entities: WorldEntity[]) => void;
+  addEntity: (entity: Omit<WorldEntity, 'id'>) => void;
+  updateEntity: (id: string, updates: Partial<WorldEntity>) => void;
+  deleteEntity: (id: string) => void;
+  addPrefab: (prefab: Omit<Prefab, 'id'>) => void;
+  saveScene: (name: string) => void;
+  loadScene: (id: string) => void;
+  createScene: (name: string) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -75,6 +94,26 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [socket, setSocket] = useState<Socket | null>(null);
   const [config, setConfig] = useState<WorkspaceConfig>(DEFAULT_CONFIG);
   const [pipelineItems, setPipelineItems] = useState<PipelineItem[]>([]);
+  const [entities, setEntities] = useState<WorldEntity[]>([
+    { id: '1', type: 'mesh', name: 'Primary Cube', x: 0, y: 2, z: -5, scale: 1, rotation: 0, properties: { color: '#06b6d4' } },
+    { id: '2', type: 'light', name: 'Key Light', x: 10, y: 10, z: 10, scale: 1, rotation: 0, properties: { intensity: 1.5, color: '#00ffff' } },
+    { id: '3', type: 'mesh', name: 'Ground Plane', x: 0, y: -0.01, z: 0, scale: 20, rotation: 0, properties: { color: '#313131' } },
+  ]);
+  const [prefabs, setPrefabs] = useState<Prefab[]>([
+    { id: 'p1', name: 'Standard Box', type: 'mesh', properties: { scale: 1, color: '#06b6d4' } },
+    { id: 'p2', name: 'Omni Light', type: 'light', properties: { intensity: 1.5, color: '#ffffff' } },
+    { id: 'p3', name: 'Neon Sphere', type: 'mesh', properties: { scale: 1.2, color: '#ff00ff' } },
+    { id: 'p4', name: 'Spotlight', type: 'light', properties: { intensity: 3, color: '#00ffff' } },
+    { id: 'p5', name: 'Structure Block', type: 'group', properties: { color: '#ffffff' } } as any,
+  ]);
+  const [scenes, setScenes] = useState<Scene[]>([
+    { id: 's1', name: 'Default Setup', entities: [
+      { id: '1', type: 'mesh', name: 'Primary Cube', x: 0, y: 2, z: -5, scale: 1, rotation: 0, properties: { color: '#06b6d4' } },
+      { id: '2', type: 'light', name: 'Key Light', x: 10, y: 10, z: 10, scale: 1, rotation: 0, properties: { intensity: 1.5, color: '#00ffff' } },
+      { id: '3', type: 'mesh', name: 'Ground Plane', x: 0, y: -0.01, z: 0, scale: 20, rotation: 0, properties: { color: '#313131' } },
+    ], timestamp: Date.now() }
+  ]);
+  const [currentSceneId, setCurrentSceneId] = useState<string | null>('s1');
 
   const refreshFiles = useCallback(async () => {
     const res = await fetch('/api/files');
@@ -143,14 +182,81 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const sendTerminalCommand = (command: string) => {
+    // Log the input to the terminal logs so user sees what they typed
+    setTerminalLogs(prev => [...prev.slice(-100), `> ${command}`]);
+
     if (command.startsWith('/')) {
       const [cmd, ...args] = command.split(' ');
-      if (cmd === '/clone' && args.length > 0) {
-        executeAgentTask(`Clone the repository from ${args[0]} into a subdirectory called 'external-source'. Then analyze the project structure.`);
+      
+      // Common Logic for Workspace Commands
+      if (cmd === '/clone') {
+        const repo = args[0] || "";
+        executeAgentTask(`Clone the repository ${repo} into a subdirectory called 'external-source'. Then analyze the project structure.`);
+        return;
+      }
+      if (cmd === '/github') {
+        executeAgentTask("Synchronize the current workspace with the upstream GitHub repository. Check for remote changes and merge them.");
         return;
       }
       if (cmd === '/build') {
         executeAgentTask(`Run the build command for the project in 'external-source' and copy the output to the 'generated-editors/local-workspace' directory.`);
+        return;
+      }
+      if (cmd === '/deploy') {
+        executeAgentTask("Produce a DISTRIBUTION_MANIFEST.md that catalogs current spatial assets and rendering logic for deployment.");
+        return;
+      }
+      if (cmd === '/test') {
+        executeAgentTask("Run the workspace test suite and verify system integrity.");
+        return;
+      }
+      if (cmd === '/config:reset') {
+        updateConfig({
+          panels: {
+            left: ["files", "assets"],
+            center: ["viewport"],
+            right: ["inspector", "ai"],
+            bottom: ["terminal", "console"]
+          },
+          theme: "dark"
+        });
+        setTerminalLogs(prev => [...prev, "System configuration reset to factory defaults."]);
+        return;
+      }
+      if (cmd === '/theme:toggle') {
+        updateConfig({ theme: config.theme === 'dark' ? 'light' : 'dark' });
+        setTerminalLogs(prev => [...prev, `Theme swapped to ${config.theme === 'dark' ? 'light' : 'dark'}`]);
+        return;
+      }
+      if (cmd === '/spatial') {
+        setViewMode('spatial');
+        return;
+      }
+      if (cmd === '/engine') {
+        setViewMode('engine');
+        return;
+      }
+      if (cmd === '/clear') {
+        setTerminalLogs([]);
+        return;
+      }
+      if (cmd === '/help') {
+        setTerminalLogs(prev => [
+          ...prev, 
+          "AVAILABLE COMMANDS:",
+          "  /clone <url>    - Clone external repository",
+          "  /github         - Sync with GitHub",
+          "  /build          - Build external source",
+          "  /deploy         - Package for distribution",
+          "  /test           - Run workspace tests",
+          "  /config:reset   - Reset layout",
+          "  /theme:toggle   - Swap light/dark",
+          "  /spatial        - Enter spatial view",
+          "  /engine         - Enter merged engine editor",
+          "  /clear          - Clear terminal",
+          "  /help           - Show this message",
+          "  [standard bash commands are passed to shell]"
+        ]);
         return;
       }
     }
@@ -229,6 +335,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-dark', 'theme-light', 'theme-brutalist');
+    root.classList.add(`theme-${config.theme}`);
+  }, [config.theme]);
+
   const addPipelineItem = (item: Omit<PipelineItem, 'id' | 'timestamp' | 'status' | 'progress'>) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newItem: PipelineItem = {
@@ -254,11 +366,63 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, 500);
   };
 
+  const addEntity = (entity: Omit<WorldEntity, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newEntity: WorldEntity = {
+      ...entity,
+      id,
+      scale: entity.scale ?? 1,
+      rotation: entity.rotation ?? 0,
+      z: entity.z ?? 0
+    };
+    setEntities(prev => [...prev, newEntity]);
+  };
+
+  const updateEntity = (id: string, updates: Partial<WorldEntity>) => {
+    setEntities(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  };
+
+  const deleteEntity = (id: string) => {
+    setEntities(prev => prev.filter(e => e.id !== id));
+  };
+
+  const addPrefab = (prefab: Omit<Prefab, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setPrefabs(prev => [...prev, { ...prefab, id }]);
+  };
+
+  const saveScene = (name: string) => {
+    if (currentSceneId) {
+      setScenes(prev => prev.map(s => s.id === currentSceneId ? { ...s, name, entities, timestamp: Date.now() } : s));
+      addAgentLog(`Saved scene: ${name}`, 'success');
+    } else {
+      createScene(name);
+    }
+  };
+
+  const loadScene = (id: string) => {
+    const scene = scenes.find(s => s.id === id);
+    if (scene) {
+      setEntities([...scene.entities]);
+      setCurrentSceneId(id);
+      addAgentLog(`Loaded scene: ${scene.name}`, 'info');
+    }
+  };
+
+  const createScene = (name: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newScene: Scene = { id, name, entities: [...entities], timestamp: Date.now() };
+    setScenes(prev => [...prev, newScene]);
+    setCurrentSceneId(id);
+    addAgentLog(`Created new scene: ${name}`, 'success');
+  };
+
   return (
     <WorkspaceContext.Provider value={{
-      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, activeModel, activeProvider, isAgentThinking, targetUrl, config, pipelineItems,
+      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, activeModel, activeProvider, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
-      setViewMode, setSidebarOpen, setTargetUrl, setModel: setActiveModel, setProvider: setActiveProvider, executeAgentTask, updateConfig, addPipelineItem
+      setViewMode, setSidebarOpen, setTargetUrl, setModel: setActiveModel, setProvider: setActiveProvider, executeAgentTask, updateConfig, addPipelineItem,
+      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene
     }}>
       {children}
     </WorkspaceContext.Provider>

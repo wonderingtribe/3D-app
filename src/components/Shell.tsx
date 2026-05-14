@@ -25,6 +25,7 @@ import CommandNexus from './CommandNexus';
 import WebView from './WebView';
 import ProjectSettings from './ProjectSettings';
 import GltfPipeline from './GltfPipeline';
+import EngineEditor from './EngineEditor';
 import { cn } from '../lib/utils';
 
 export default function Shell() {
@@ -79,6 +80,7 @@ export default function Shell() {
                 <NavButton active={viewMode === 'spatial'} onClick={() => setViewMode('spatial')} icon={Box} />
                 <NavButton active={viewMode === 'preview'} onClick={() => setViewMode('preview')} icon={Globe} />
                 <NavButton active={viewMode === 'hybrid'} onClick={() => setViewMode('hybrid')} icon={Layers} />
+                <NavButton active={viewMode === 'engine'} onClick={() => setViewMode('engine')} icon={Cpu} />
              </div>
           </div>
           <div className="flex items-center gap-4 text-xs">
@@ -169,6 +171,11 @@ export default function Shell() {
                   <div className="flex-1">
                     <WebView />
                   </div>
+               </div>
+             )}
+             {viewMode === 'engine' && (
+               <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-black">
+                  <EngineEditor />
                </div>
              )}
            </div>

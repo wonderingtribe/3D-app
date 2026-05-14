@@ -91,6 +91,7 @@ CAPABILITIES:
 - can RUN any shell command (terminal).
 - can UPDATE workspace configuration (layout, panels, features).
 - can OBSERVE the glTF asset pipeline status.
+- can GENERATE full system templates and self-replication bundles for distribution.
 
 WORKSPACE CONTEXT:
 - Files: ${JSON.stringify(context.files.map((f: any) => f.path))}

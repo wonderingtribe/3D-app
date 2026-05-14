@@ -52,6 +52,7 @@ export default function CommandNexus() {
 
     if (cmd === '/spatial') setViewMode('spatial');
     if (cmd === '/clone') executeAgentTask("Help me clone a repository to bring in my website code.");
+    if (cmd === '/github') executeAgentTask("Synchronize the current workspace with the upstream GitHub repository.");
     if (cmd === '/test') executeAgentTask("Run the test suite and check for any failures in my 3D engine.");
     if (cmd === '/config:reset') {
       updateConfig({

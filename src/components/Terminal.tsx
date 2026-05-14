@@ -40,12 +40,27 @@ export default function Terminal() {
       >
         <div className="text-cyan-400 opacity-60">$ aetheros-init --runtime=cloud</div>
         <div className="text-white/40 italic">Initializing high-compute OCI environment...</div>
-        {terminalLogs.map((log, i) => (
-          <div key={i} className="whitespace-pre-wrap text-white/70">
-            <span className="text-cyan-500/40 mr-1.5">›</span>
-            {log}
-          </div>
-        ))}
+        {terminalLogs.map((log, i) => {
+          const isUser = log.startsWith('> ');
+          return (
+            <div key={i} className={cn(
+              "whitespace-pre-wrap transition-all",
+              isUser ? "text-cyan-400 font-bold mt-2" : "text-white/70"
+            )}>
+              {isUser ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-cyan-500/40">λ</span>
+                  {log.substring(2)}
+                </span>
+              ) : (
+                <div className="flex gap-2">
+                  <span className="text-white/20 shrink-0 select-none">›</span>
+                  <span>{log}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
         {terminalLogs.length === 0 && (
           <div className="text-white/20 italic">Waiting for process attachment...</div>
         )}

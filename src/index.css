@@ -7,17 +7,40 @@
   
   --color-brand-cyan: #06b6d4;
   --color-brand-blue: #2563eb;
+  
+  /* Default Theme (Dark) */
   --color-ui-bg: #020204;
   --color-ui-panel: #0a0a0c;
+  --color-ui-text: #cbd5e1;
+  --color-ui-text-muted: #64748b;
   --color-ui-border: rgba(255, 255, 255, 0.05);
+  --color-ui-accent: #06b6d4;
+}
+
+:root.theme-light {
+  --color-ui-bg: #f8fafc;
+  --color-ui-panel: #ffffff;
+  --color-ui-text: #1e293b;
+  --color-ui-text-muted: #64748b;
+  --color-ui-border: rgba(0, 0, 0, 0.05);
+  --color-ui-accent: #2563eb;
+}
+
+:root.theme-brutalist {
+  --color-ui-bg: #e5e5e5;
+  --color-ui-panel: #ffffff;
+  --color-ui-text: #000000;
+  --color-ui-text-muted: #333333;
+  --color-ui-border: #000000;
+  --color-ui-accent: #ffde00;
 }
 
 @layer base {
   html, body, #root {
-    @apply h-full w-full overflow-hidden;
+    @apply h-full w-full overflow-hidden transition-colors duration-300;
   }
   body {
-    @apply bg-ui-bg text-slate-300 antialiased font-sans;
+    @apply bg-ui-bg text-ui-text antialiased font-sans;
   }
 }
 

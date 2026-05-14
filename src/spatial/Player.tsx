@@ -12,6 +12,14 @@ export default function Player() {
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
 
+  React.useEffect(() => {
+    return () => {
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+    };
+  }, []);
+
   useFrame((state) => {
     const { forward, backward, left, right, jump } = getKeys();
     

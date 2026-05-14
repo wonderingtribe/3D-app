@@ -12,7 +12,7 @@ export interface Tab {
   isDirty?: boolean;
 }
 
-export type ViewMode = 'editor' | 'spatial' | 'preview' | 'hybrid';
+export type ViewMode = 'editor' | 'spatial' | 'preview' | 'hybrid' | 'engine';
 
 export interface WorkspaceConfig {
   engine: "three" | "playcanvas" | "babylon";
@@ -34,6 +34,13 @@ export interface WorkspaceConfig {
   skybox: "city" | "night" | "apartment" | "forest" | "dawn" | "sunset" | "warehouse";
   customEngineUrl?: string;
   localDev?: boolean;
+  keys?: {
+    openai?: string;
+    gemini?: string;
+    anthropic?: string;
+    perplexity?: string;
+    groq?: string;
+  };
 }
 
 export interface PipelineItem {
@@ -52,6 +59,28 @@ export interface AgentLog {
   type: 'info' | 'success' | 'warning' | 'error' | 'ai' | 'thinking' | 'action';
 }
 
-export interface WorkspaceState {
-  targetUrl: string;
+export interface WorldEntity {
+  id: string;
+  type: 'mesh' | 'light' | 'camera' | 'group';
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  scale: number;
+  rotation: number;
+  properties?: any;
+}
+
+export interface Prefab {
+  id: string;
+  name: string;
+  type: 'mesh' | 'light' | 'camera' | 'group';
+  properties: any;
+}
+
+export interface Scene {
+  id: string;
+  name: string;
+  entities: WorldEntity[];
+  timestamp: number;
 }

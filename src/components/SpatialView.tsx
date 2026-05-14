@@ -2,15 +2,19 @@ import React, { Suspense, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars, Float, MeshDistortMaterial, Grid, Environment, KeyboardControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { Box, Cuboid as Cube, Cpu, Zap, Box as BoxIcon, User, Bot, Map, Palette } from 'lucide-react';
+import { Box, Cuboid as Cube, Cpu, Zap, Box as BoxIcon, User, Bot, Map, Palette, Sparkles } from 'lucide-react';
 import Player from '../spatial/Player';
 import NPC from '../spatial/NPC';
 import { useWorkspace } from '../WorkspaceContext';
 import WebView from './WebView';
+import { cn } from '../lib/utils';
 
-function Scene() {
+function Scene({ controlMode }: { controlMode: 'orbit' | 'player' }) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const { config } = useWorkspace();
+  const { config, entities } = useWorkspace();
+
+  const isLight = config.theme === 'light';
+  const isBrutalist = config.theme === 'brutalist';
 
   useFrame((state) => {
     if (meshRef.current) {
@@ -21,18 +25,49 @@ function Scene() {
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} color="#00ffff" />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#ff00ff" />
+      <ambientLight intensity={isLight ? 0.3 : 0.2} />
       
-      <Player />
+      {controlMode === 'player' && <Player />}
 
-      <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-        <mesh ref={meshRef} position={[0, 2, -5]}>
-          <boxGeometry args={[2, 2, 2]} />
-          <MeshDistortMaterial color="#06b6d4" speed={2} distort={0.4} radius={1} />
-        </mesh>
-      </Float>
+      {/* Render Entities from Workspace Context */}
+      {entities.map((ent) => {
+        // Map 2D Canvas coordinates to 3D roughly
+        // ent.x -> 3D X
+        // ent.y -> 3D Z
+        // ent.z -> 3D Y (Height)
+        const pos: [number, number, number] = [
+          (ent.x - 200) / 20, 
+          ent.z || (ent.type === 'mesh' ? 1 : 4), 
+          (ent.y - 200) / 20
+        ];
+
+        const scale = ent.scale || 1;
+        const rotation: [number, number, number] = [0, (ent.rotation || 0) * (Math.PI / 180), 0];
+
+        if (ent.type === 'light') {
+          return (
+            <pointLight 
+              key={ent.id} 
+              position={pos} 
+              intensity={ent.properties?.intensity || 2} 
+              color={ent.properties?.color || "#ffffff"} 
+            />
+          );
+        }
+
+        return (
+          <Float key={ent.id} speed={1} rotationIntensity={0.2} floatIntensity={0.2} position={pos} rotation={rotation}>
+            <mesh scale={[scale, scale, scale]}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshStandardMaterial 
+                color={ent.properties?.color || (isBrutalist ? "#ffde00" : "#06b6d4")}
+                metalness={0.5}
+                roughness={0.2}
+              />
+            </mesh>
+          </Float>
+        );
+      })}
 
       <NPC position={[3, 0, 3]} />
       <NPC position={[-3, 0, -5]} />
@@ -44,21 +79,24 @@ function Scene() {
           fadeStrength={5}
           cellSize={1}
           sectionSize={5}
-          sectionColor="#06b6d4"
-          cellColor="#313131"
+          sectionColor={isBrutalist ? "#000000" : (isLight ? "#2563eb" : "#06b6d4")}
+          cellColor={isLight ? "#cbd5e1" : "#313131"}
           position={[0, -0.01, 0]}
         />
       )}
       
-      {config.features.gizmos && <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />}
+      {config.features.gizmos && !isLight && <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />}
       <Environment preset={config.skybox as any} />
-      <OrbitControls makeDefault />
+      {controlMode === 'orbit' && <OrbitControls makeDefault />}
     </>
   );
 }
 
 export default function SpatialView() {
   const { config, updateConfig, targetUrl } = useWorkspace();
+  const [controlMode, setControlMode] = React.useState<'orbit' | 'player'>('orbit');
+  const [showHUD, setShowHUD] = React.useState(true);
+  
   const map = useMemo(() => [
     { name: "forward", keys: ["ArrowUp", "w", "W"] },
     { name: "backward", keys: ["ArrowDown", "s", "S"] },
@@ -92,22 +130,36 @@ export default function SpatialView() {
         </div>
       ) : (
         <>
+      {showHUD ? (
+        <>
           <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-         <button className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-cyan-400 hover:bg-white/10 transition-all group/btn relative">
+         <button 
+           onClick={() => setControlMode('orbit')}
+           className={cn(
+             "p-2 backdrop-blur-md rounded-lg border transition-all group/btn relative",
+             controlMode === 'orbit' ? "bg-ui-accent/20 border-ui-accent text-ui-accent" : "bg-ui-panel border-ui-border text-ui-text-muted hover:text-ui-accent hover:bg-ui-panel/80 transition-all"
+           )}
+         >
             <BoxIcon className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-black/80 rounded text-[10px] text-white opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">Assets</span>
+            <span className="absolute left-full ml-2 px-2 py-1 bg-ui-panel border border-ui-border rounded text-[10px] text-ui-text opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap shadow-xl">Orbit View</span>
          </button>
-         <button className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/40 hover:text-cyan-400 hover:bg-white/10 transition-all group/btn relative">
+         <button 
+           onClick={() => setControlMode('player')}
+           className={cn(
+             "p-2 backdrop-blur-md rounded-lg border transition-all group/btn relative",
+             controlMode === 'player' ? "bg-ui-accent/20 border-ui-accent text-ui-accent" : "bg-ui-panel border-ui-border text-ui-text-muted hover:text-ui-accent hover:bg-ui-panel/80 transition-all"
+           )}
+         >
             <User className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-black/80 rounded text-[10px] text-white opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">Player Control</span>
+            <span className="absolute left-full ml-2 px-2 py-1 bg-ui-panel border border-ui-border rounded text-[10px] text-ui-text opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap shadow-xl">Player Control (FPS)</span>
          </button>
-         <button className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/40 hover:text-cyan-400 hover:bg-white/10 transition-all group/btn relative">
+         <button className="p-2 bg-ui-panel border border-ui-border text-ui-text-muted rounded-lg backdrop-blur-md hover:text-ui-accent hover:bg-ui-panel/80 transition-all group/btn relative">
             <Bot className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-black/80 rounded text-[10px] text-white opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">NPC Entities</span>
+            <span className="absolute left-full ml-2 px-2 py-1 bg-ui-panel border border-ui-border rounded text-[10px] text-ui-text opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap shadow-xl">NPC Entities</span>
          </button>
-         <button className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/40 hover:text-cyan-400 hover:bg-white/10 transition-all group/btn relative">
+         <button className="p-2 bg-ui-panel border border-ui-border text-ui-text-muted rounded-lg backdrop-blur-md hover:text-ui-accent hover:bg-ui-panel/80 transition-all group/btn relative">
             <Map className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-black/80 rounded text-[10px] text-white opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap">World Map</span>
+            <span className="absolute left-full ml-2 px-2 py-1 bg-ui-panel border border-ui-border rounded text-[10px] text-ui-text opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap shadow-xl">World Map</span>
          </button>
       </div>
 
@@ -115,7 +167,7 @@ export default function SpatialView() {
          <select 
            value={config.skybox} 
            onChange={(e) => updateConfig({ skybox: e.target.value as any })}
-           className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg px-3 py-1.5 text-[10px] text-cyan-400 font-bold outline-none cursor-pointer hover:bg-white/5 transition-colors"
+           className="bg-ui-panel border border-ui-border rounded-lg px-3 py-1.5 text-[10px] text-ui-accent font-bold outline-none cursor-pointer hover:bg-ui-accent/5 transition-colors backdrop-blur-md shadow-lg"
          >
            <option value="city">CITY_DUSK</option>
            <option value="night">DEEP_NIGHT</option>
@@ -136,17 +188,35 @@ export default function SpatialView() {
          </button>
       </div>
 
-      <div className="absolute top-4 right-4 z-10 bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/10 flex flex-col gap-1 w-48">
-         <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter mb-2">Metrics</h3>
-         <Metric label="GPU" value="24%" color="bg-cyan-500" />
+      <div className="absolute top-4 right-4 z-10 bg-ui-panel/80 backdrop-blur-md p-3 rounded-xl border border-ui-border flex flex-col gap-1 w-48 shadow-xl">
+         <h3 className="text-[10px] font-bold text-ui-text-muted uppercase tracking-tighter mb-2">Metrics</h3>
+         <Metric label="GPU" value="24%" color="bg-ui-accent" />
          <Metric label="MEM" value="1.2GB" color="bg-purple-500" />
          <Metric label="FPS" value="60" color="bg-green-500" />
       </div>
 
+      <button 
+        onClick={() => setShowHUD(false)}
+        className="absolute bottom-4 right-4 z-10 p-2 bg-ui-panel/50 hover:bg-ui-accent text-ui-text-muted hover:text-white rounded-lg border border-ui-border transition-all"
+        title="Hide HUD"
+      >
+        <Palette className="w-4 h-4" />
+      </button>
+    </>
+  ) : (
+    <button 
+      onClick={() => setShowHUD(true)}
+      className="absolute bottom-4 right-4 z-10 p-2 bg-ui-accent text-white rounded-lg shadow-lg animate-pulse"
+      title="Show HUD"
+    >
+      <Sparkles className="w-4 h-4" />
+    </button>
+  )}
+
       <KeyboardControls map={map}>
         <Canvas shadows camera={{ position: [0, 5, 10], fov: 75 }}>
           <Suspense fallback={null}>
-            <Scene />
+            <Scene controlMode={controlMode} />
           </Suspense>
         </Canvas>
       </KeyboardControls>
@@ -163,15 +233,13 @@ export default function SpatialView() {
 function Metric({ label, value, color }: { label: string, value: string, color: string }) {
   return (
     <div className="flex items-center justify-between text-[10px]">
-       <span className="text-gray-400">{label}</span>
-       <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden mx-2">
+       <span className="text-ui-text-muted">{label}</span>
+       <div className="w-24 h-1.5 bg-ui-text-muted/10 rounded-full overflow-hidden mx-2">
           <div className={cn("h-full rounded-full transition-all duration-1000", color)} style={{ width: value.includes('%') ? value : '60%' }} />
        </div>
-       <span className="text-white font-bold">{value}</span>
+       <span className="text-ui-text font-bold">{value}</span>
     </div>
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
+// Remove local cn as we now import it correctly

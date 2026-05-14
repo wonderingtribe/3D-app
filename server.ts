@@ -9,8 +9,6 @@ import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
@@ -100,12 +98,34 @@ async function startServer() {
   // Socket.IO for Terminal and Agent Logs
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
+    let currentCwd = process.cwd();
 
     socket.on("terminal-input", async (command) => {
-      // Basic terminal execution simulation
       try {
-        const { stdout, stderr } = await execAsync(command);
-        socket.emit("terminal-output", stdout || stderr);
+        const trimmedCmd = command.trim();
+        
+        // Handle cd command specifically to maintain state
+        if (trimmedCmd.startsWith("cd ")) {
+          const newDir = trimmedCmd.substring(3).trim();
+          const targetPath = path.resolve(currentCwd, newDir);
+          
+          try {
+            const stats = await fs.stat(targetPath);
+            if (stats.isDirectory()) {
+              currentCwd = targetPath;
+              socket.emit("terminal-output", `Changed directory to: ${currentCwd}`);
+            } else {
+              socket.emit("terminal-output", `Not a directory: ${newDir}`);
+            }
+          } catch (err) {
+            socket.emit("terminal-output", `Directory not found: ${newDir}`);
+          }
+          return;
+        }
+
+        // Execute other commands in the current cwd
+        const { stdout, stderr } = await execAsync(command, { cwd: currentCwd });
+        socket.emit("terminal-output", stdout || stderr || "Command executed.");
       } catch (err: any) {
         socket.emit("terminal-output", err.message);
       }
