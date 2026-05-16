@@ -1,0 +1,11 @@
+{
+  "name": "spatial-workspace",
+  "description": "A 3D spatial development environment and engine editor",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
