@@ -21,7 +21,7 @@ import { useState, useRef } from 'react';
 
 export default function CanvasEditor() {
   const { config, addAgentLog, entities, updateEntity, addEntity, deleteEntity, prefabs, addPrefab, scenes, currentSceneId, saveScene, loadScene, createScene } = useWorkspace();
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [isAIArchitectOpen, setIsAIArchitectOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'place'>('select');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,28 +71,70 @@ export default function CanvasEditor() {
   };
 
   const instantiatePrefab = (prefab: any) => {
-    addEntity({
-      type: prefab.type,
-      name: `Instanced ${prefab.name}`,
-      x: 100 + Math.random() * 50,
-      y: 100 + Math.random() * 50,
-      z: -5,
-      scale: prefab.properties.scale || 1,
-      rotation: prefab.properties.rotation || 0,
-      properties: { ...prefab.properties },
-    });
-    addAgentLog(`Instantiated prefab: ${prefab.name}`, 'success');
+    if (prefab.type === 'group' && prefab.properties.children) {
+      const baseX = 100 + Math.random() * 50;
+      const baseY = 100 + Math.random() * 50;
+      prefab.properties.children.forEach((child: any) => {
+        addEntity({
+          type: child.type,
+          name: child.name,
+          x: baseX + child.x,
+          y: baseY + child.y,
+          z: child.z,
+          scale: child.scale,
+          rotation: child.rotation,
+          properties: child.properties
+        });
+      });
+      addAgentLog(`Instantiated group prefab: ${prefab.name}`, 'success');
+    } else {
+      addEntity({
+        type: prefab.type,
+        name: `Instanced ${prefab.name}`,
+        x: 100 + Math.random() * 50,
+        y: 100 + Math.random() * 50,
+        z: -5,
+        scale: prefab.properties.scale || 1,
+        rotation: prefab.properties.rotation || 0,
+        properties: { ...prefab.properties },
+      });
+      addAgentLog(`Instantiated prefab: ${prefab.name}`, 'success');
+    }
   };
 
-  const saveAsPrefab = (id: string) => {
-    const entity = entities.find(e => e.id === id);
-    if (!entity) return;
+  const saveAsPrefab = () => {
+    if (selectedNodes.length === 0) return;
+    
+    if (selectedNodes.length === 1) {
+      const entity = entities.find(e => e.id === selectedNodes[0]);
+      if (!entity) return;
+      addPrefab({
+        name: entity.name + " PFB",
+        type: entity.type,
+        properties: { ...entity.properties, scale: entity.scale, rotation: entity.rotation }
+      });
+      addAgentLog(`Defined new prefab from ${entity.name}`, 'success');
+      return;
+    }
+    
+    const selectedEntities = entities.filter(e => selectedNodes.includes(e.id));
+    const name = window.prompt("Enter Prefab Name for group:", "New Group Prefab") || "Group Prefab";
+    
+    const avgX = selectedEntities.reduce((sum, e) => sum + e.x, 0) / selectedEntities.length;
+    const avgY = selectedEntities.reduce((sum, e) => sum + e.y, 0) / selectedEntities.length;
+    
+    const children = selectedEntities.map(e => ({
+       ...e,
+       x: e.x - avgX,
+       y: e.y - avgY
+    }));
+    
     addPrefab({
-      name: entity.name + " PFB",
-      type: entity.type,
-      properties: { ...entity.properties, scale: entity.scale, rotation: entity.rotation }
+      name,
+      type: 'group',
+      properties: { children }
     });
-    addAgentLog(`Defined new prefab from ${entity.name}`, 'success');
+    addAgentLog(`Defined new grouped prefab from ${selectedNodes.length} entities`, 'success');
   };
 
   return (
@@ -113,10 +155,16 @@ export default function CanvasEditor() {
           {entities.map((node) => (
             <div 
               key={node.id}
-              onClick={() => setSelectedNode(node.id)}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                  setSelectedNodes(prev => prev.includes(node.id) ? prev.filter(id => id !== node.id) : [...prev, node.id]);
+                } else {
+                  setSelectedNodes([node.id]);
+                }
+              }}
               className={cn(
                 "group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border",
-                selectedNode === node.id 
+                selectedNodes.includes(node.id) 
                   ? "bg-ui-accent/10 border-ui-accent/30 text-ui-text shadow-inner" 
                   : "bg-white/5 border-transparent text-ui-text-muted hover:border-white/10 hover:bg-white/10"
               )}
@@ -127,7 +175,7 @@ export default function CanvasEditor() {
               )} />
               <span className="text-[10px] font-medium flex-1 truncate">{node.name}</span>
               <button 
-                onClick={(e) => { e.stopPropagation(); deleteEntity(node.id); if(selectedNode === node.id) setSelectedNode(null); }}
+                onClick={(e) => { e.stopPropagation(); deleteEntity(node.id); setSelectedNodes(prev => prev.filter(id => id !== node.id)); }}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"
               >
                 <Trash2 className="w-3 h-3" />
@@ -254,28 +302,43 @@ export default function CanvasEditor() {
               key={node.id}
               className={cn(
                 "absolute cursor-move transition-shadow p-3 rounded-lg border flex flex-col gap-2 min-w-[120px] shadow-lg",
-                selectedNode === node.id 
+                selectedNodes.includes(node.id) 
                   ? "bg-ui-accent/20 border-ui-accent shadow-ui-accent/20 z-10" 
                   : "bg-ui-panel/80 border-ui-border text-ui-text-muted backdrop-blur-md"
               )}
               style={{
                 left: node.x + 200,
                 top: node.y,
-                transform: `scale(${selectedNode === node.id ? 1.05 : 1})`,
+                transform: `scale(${selectedNodes.includes(node.id) ? 1.05 : 1})`,
               }}
               onMouseDown={(e) => {
                 e.stopPropagation();
-                setSelectedNode(node.id);
-                // Basic drag logic
+                let currentlySelected = selectedNodes;
+                if (!selectedNodes.includes(node.id)) {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                    currentlySelected = [...selectedNodes, node.id];
+                  } else {
+                    currentlySelected = [node.id];
+                  }
+                  setSelectedNodes(currentlySelected);
+                }
+                
                 const startX = e.clientX;
                 const startY = e.clientY;
-                const origX = node.x;
-                const origY = node.y;
+                
+                const startPositions = currentlySelected.map(id => {
+                  const ent = entities.find(e => e.id === id);
+                  return { id, origX: ent?.x || 0, origY: ent?.y || 0 };
+                });
                 
                 const handleMouseMove = (mmE: MouseEvent) => {
-                  updateEntity(node.id, {
-                    x: origX + (mmE.clientX - startX),
-                    y: origY + (mmE.clientY - startY)
+                  const dx = mmE.clientX - startX;
+                  const dy = mmE.clientY - startY;
+                  startPositions.forEach(({ id, origX, origY }) => {
+                    updateEntity(id, {
+                      x: origX + dx,
+                      y: origY + dy
+                    });
                   });
                 };
                 
@@ -334,72 +397,101 @@ export default function CanvasEditor() {
           </button>
         </div>
         
-        {selectedNode ? (() => {
-          const node = entities.find(n => n.id === selectedNode);
-          if (!node) return null;
-          return (
-            <div className="space-y-4 p-4">
-              <div className="space-y-1">
-                <label className="text-[8px] text-ui-text-muted uppercase">Entity Identity</label>
-                <input 
-                  className="w-full bg-ui-bg border border-ui-border rounded p-1.5 text-[10px] text-ui-text outline-none focus:border-ui-accent"
-                  value={node.name}
-                  onChange={(e) => updateEntity(node.id, { name: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <PropertyInput 
-                    label="Pos X" 
-                    value={node.x} 
-                    onChange={(v) => updateEntity(node.id, { x: v })} 
-                  />
-                  <PropertyInput 
-                    label="Pos Y" 
-                    value={node.y} 
-                    onChange={(v) => updateEntity(node.id, { y: v })} 
-                  />
-                  <PropertyInput 
-                    label="Pos Z" 
-                    value={node.z} 
-                    onChange={(v) => updateEntity(node.id, { z: v })} 
+        {selectedNodes.length > 0 ? (() => {
+          if (selectedNodes.length === 1) {
+            const node = entities.find(n => n.id === selectedNodes[0]);
+            if (!node) return null;
+            return (
+              <div className="space-y-4 p-4">
+                <div className="space-y-1">
+                  <label className="text-[8px] text-ui-text-muted uppercase">Entity Identity</label>
+                  <input 
+                    className="w-full bg-ui-bg border border-ui-border rounded p-1.5 text-[10px] text-ui-text outline-none focus:border-ui-accent"
+                    value={node.name}
+                    onChange={(e) => updateEntity(node.id, { name: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <PropertyInput 
-                    label="Scale" 
-                    value={node.scale} 
-                    onChange={(v) => updateEntity(node.id, { scale: v })} 
-                  />
-                  <PropertyInput 
-                    label="Rotation" 
-                    value={node.rotation} 
-                    onChange={(v) => updateEntity(node.id, { rotation: v })} 
-                  />
+                
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <PropertyInput 
+                      label="Pos X" 
+                      value={node.x} 
+                      onChange={(v) => updateEntity(node.id, { x: v })} 
+                    />
+                    <PropertyInput 
+                      label="Pos Y" 
+                      value={node.y} 
+                      onChange={(v) => updateEntity(node.id, { y: v })} 
+                    />
+                    <PropertyInput 
+                      label="Pos Z" 
+                      value={node.z} 
+                      onChange={(v) => updateEntity(node.id, { z: v })} 
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <PropertyInput 
+                      label="Scale" 
+                      value={node.scale} 
+                      onChange={(v) => updateEntity(node.id, { scale: v })} 
+                    />
+                    <PropertyInput 
+                      label="Rotation" 
+                      value={node.rotation} 
+                      onChange={(v) => updateEntity(node.id, { rotation: v })} 
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-[8px] text-ui-text-muted uppercase">Logic Hooks</label>
-                <div className="p-2 bg-ui-bg border border-ui-border rounded text-[9px] font-mono text-cyan-400/80">
-                  {"on_update: () => move(self)"}
+                <div className="space-y-2">
+                  <label className="text-[8px] text-ui-text-muted uppercase">Logic Hooks</label>
+                  <div className="p-2 bg-ui-bg border border-ui-border rounded text-[9px] font-mono text-cyan-400/80">
+                    {"on_update: () => move(self)"}
+                  </div>
+                </div>
+                
+                <div className="mt-auto pt-4 border-t border-ui-border space-y-2">
+                   <button 
+                     onClick={saveAsPrefab}
+                     className="w-full py-2 border border-ui-accent text-ui-accent hover:bg-ui-accent hover:text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
+                   >
+                     Save as Prefab
+                   </button>
+                   <button className="w-full py-2 bg-ui-accent rounded text-[10px] font-bold text-white uppercase tracking-widest shadow-lg">
+                     Sync with Spatial
+                   </button>
                 </div>
               </div>
-              
-              <div className="mt-auto pt-4 border-t border-ui-border space-y-2">
-                 <button 
-                   onClick={() => saveAsPrefab(selectedNode)}
-                   className="w-full py-2 border border-ui-accent text-ui-accent hover:bg-ui-accent hover:text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
-                 >
-                   Save as Prefab
-                 </button>
-                 <button className="w-full py-2 bg-ui-accent rounded text-[10px] font-bold text-white uppercase tracking-widest shadow-lg">
-                   Sync with Spatial
-                 </button>
+            );
+          } else {
+            return (
+              <div className="space-y-4 p-4 text-center mt-10">
+                <Layers className="w-8 h-8 text-ui-text-muted mx-auto mb-4 opacity-50" />
+                <h4 className="text-[12px] font-bold text-ui-text">{selectedNodes.length} Entities Selected</h4>
+                <p className="text-[10px] text-ui-text-muted mb-8">Group manipulation features</p>
+                
+                <div className="pt-4 border-t border-ui-border space-y-2">
+                  <button 
+                    onClick={saveAsPrefab}
+                    className="w-full py-2 border border-ui-accent text-ui-accent hover:bg-ui-accent hover:text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
+                  >
+                    Save Group as Prefab
+                  </button>
+                  <button 
+                    onClick={() => {
+                      selectedNodes.forEach(id => deleteEntity(id));
+                      setSelectedNodes([]);
+                      addAgentLog(`Deleted ${selectedNodes.length} entities`, 'warning');
+                    }}
+                    className="w-full py-2 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white rounded text-[10px] font-bold uppercase tracking-widest transition-all"
+                  >
+                    Delete Selected
+                  </button>
+                </div>
               </div>
-            </div>
-          );
+            );
+          }
         })() : (
           <div className="flex-1 flex flex-col items-center justify-center text-ui-text-muted/40 text-center space-y-2">
             <Layers className="w-8 h-8 opacity-10" />
