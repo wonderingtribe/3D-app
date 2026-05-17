@@ -107,13 +107,21 @@ const PropRow = ({ label, value, color }: any) => (
 );
 
 export default function SpatialView() {
-  const [selected, setSelected] = useState(1);
-  const { viewMode, setViewMode } = useWorkspace();
+  const [selectedId, setSelectedId] = useState<string | null>("1");
+  const { 
+    entities, 
+    addEntity, 
+    addAgentLog, 
+    viewMode, 
+    setViewMode,
+    isAgentThinking
+  } = useWorkspace();
+  
   const [liveSync, setLiveSync] = useState(true);
   const [consoleOpen, setConsoleOpen] = useState(true);
   const [inspectorTab, setInspectorTab] = useState("Transform");
 
-  const selectedObj = sceneObjects.find(o => o.id === selected);
+  const selectedObj = entities.find(o => o.id === selectedId);
   const navTabs = [
     { id: "design", label: "UI Design" },
     { id: "engine", label: "Engine Setup" },
@@ -122,6 +130,35 @@ export default function SpatialView() {
     { id: "pipeline", label: "Asset Pipeline" },
     { id: "settings", label: "Settings" }
   ];
+
+  const handleSummonArchitect = async () => {
+    const prompt = window.prompt("ARCHITECT PROMPT:\nDescribe what you want to generate (e.g. 'A couple scenes with cyberpunk NPCs'):");
+    if (!prompt) return;
+
+    addAgentLog(`Interpreting architect prompt: "${prompt}"...`, 'thinking');
+    setConsoleOpen(true);
+
+    try {
+      const response = await fetch('/api/architect/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, currentEntities: entities })
+      });
+
+      if (!response.ok) throw new Error('Architect failed to respond');
+      
+      const newEntities = await response.json();
+      
+      if (Array.isArray(newEntities)) {
+        newEntities.forEach(ent => {
+          addEntity(ent);
+          addAgentLog(`Constructed entity: ${ent.name}`, 'success');
+        });
+      }
+    } catch (err: any) {
+      addAgentLog(`Architect Error: ${err.message}`, 'error');
+    }
+  };
 
   return (
     <div style={{
@@ -176,7 +213,9 @@ export default function SpatialView() {
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color: liveSync ? C.green : C.textFaint }}>LIVE SYNC</span>
         </div>
 
-        <button style={{
+        <button 
+          onClick={handleSummonArchitect}
+          style={{
           background: "rgba(167,139,250,0.12)", border: `1px solid ${C.purple}44`,
           borderRadius: 5, padding: "3px 10px", cursor: "pointer",
           fontSize: 11, fontWeight: 700, color: C.purple, display: "flex", alignItems: "center", gap: 5,
@@ -227,8 +266,8 @@ export default function SpatialView() {
             </div>
             {/* Objects */}
             <div style={{ padding: "0 6px" }}>
-              {sceneObjects.map(obj => (
-                <SceneEntity key={obj.id} obj={obj} selected={selected === obj.id} onSelect={setSelected} />
+              {entities.map(obj => (
+                <SceneEntity key={obj.id} obj={obj} selected={selectedId === obj.id} onSelect={setSelectedId} />
               ))}
             </div>
           </div>
@@ -240,7 +279,12 @@ export default function SpatialView() {
               Prefab Library
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-              {prefabs.map(p => (
+              {[
+                { name: "Standard Box", color: C.accent },
+                { name: "Point Light", color: C.amber },
+                { name: "Neon Sphere", color: C.purple },
+                { name: "Spotlight", color: C.green },
+              ].map(p => (
                 <button key={p.name} style={{
                   background: `${p.color}0e`, border: `1px solid ${p.color}30`,
                   borderRadius: 6, padding: "6px 6px 5px", cursor: "pointer",
@@ -274,16 +318,7 @@ export default function SpatialView() {
             }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>Default Setup</div>
-                <div style={{ fontSize: 10, color: C.textFaint, marginTop: 1 }}>6:24:58 PM</div>
-              </div>
-              <div style={{ display: "flex", gap: 5 }}>
-                {["NEW_MESH", "NEW_LIGHT"].map(t => (
-                  <button key={t} style={{
-                    background: "transparent", border: `1px solid ${C.border}`,
-                    borderRadius: 4, padding: "2px 6px", fontSize: 9, color: C.textFaint,
-                    cursor: "pointer", fontWeight: 600, letterSpacing: "0.04em",
-                  }}>{t}</button>
-                ))}
+                <div style={{ fontSize: 10, color: C.textFaint, marginTop: 1 }}>{new Date().toLocaleTimeString()}</div>
               </div>
             </div>
           </div>
@@ -316,52 +351,185 @@ export default function SpatialView() {
               ))}
             </div>
 
-            {/* Scene objects (simplified 3D-ish visualization) */}
+            {/* Scene objects (Simplified 3D visualization using entities) */}
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{
-                width: "40%", height: "40%", border: `1px solid ${C.borderBright}`,
-                background: "rgba(255, 255, 255, 0.05)",
+                width: "60%", height: "60%", border: `1px solid ${C.border}`,
+                background: "rgba(255, 255, 255, 0.02)",
                 transform: "rotateX(60deg) rotateZ(45deg)", transformStyle: "preserve-3d",
+                position: "relative",
               }}>
-                <div style={{
-                  position: "absolute", left: "50%", top: "50%", width: 64, height: 64,
-                  background: `linear-gradient(45deg, ${C.accentDim}, ${C.accent})`, opacity: 0.8,
-                  transform: "translate3d(-50%, -50%, 32px)", border: `1px solid ${C.accent}`,
-                  boxShadow: `0 0 20px ${C.accentGlow}`,
-                }} />
+                {entities.map((ent) => {
+                  const isSelected = ent.id === selectedId;
+                  const color = ent.properties?.color || (ent.type === 'light' ? C.amber : C.accent);
+                  
+                  // Map X, Z to grid positions (clamped/scaled for mockup)
+                  const left = 50 + (ent.x * 5);
+                  const top = 50 + (ent.z * 5);
+                  const z = (ent.y * 10);
+
+                  if (ent.type === 'light') {
+                    return (
+                      <div key={ent.id} style={{
+                        position: "absolute", left: `${left}%`, top: `${top}%`,
+                        width: 40, height: 40,
+                        background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+                        opacity: 0.6,
+                        transform: `translate3d(-50%, -50%, ${z}px)`,
+                        borderRadius: "50%",
+                        boxShadow: isSelected ? `0 0 30px ${color}` : "none",
+                        pointerEvents: "auto", cursor: "pointer",
+                      }} onClick={(e) => { e.stopPropagation(); setSelectedId(ent.id); }} />
+                    );
+                  }
+
+                  return (
+                    <div key={ent.id} style={{
+                      position: "absolute", left: `${left}%`, top: `${top}%`,
+                      width: 40 * (ent.scale || 1), height: 40 * (ent.scale || 1),
+                      background: color,
+                      opacity: 0.8,
+                      transform: `translate3d(-50%, -50%, ${z}px) rotateZ(${ent.rotation || 0}deg)`,
+                      border: isSelected ? `2px solid white` : `1px solid rgba(255,255,255,0.2)`,
+                      boxShadow: isSelected ? `0 0 20px ${C.accentGlow}` : "none",
+                      pointerEvents: "auto", cursor: "pointer",
+                    }} onClick={(e) => { e.stopPropagation(); setSelectedId(ent.id); }}>
+                      <div style={{ 
+                        position: "absolute", top: -15, left: "50%", transform: "translateX(-50%)",
+                        fontSize: 8, color: "white", whiteSpace: "nowrap", background: "black", padding: "1px 4px", borderRadius: 2
+                       }}>{ent.name}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
+
+          {/* ── CONSOLE ── */}
+          <div style={{
+            height: consoleOpen ? 110 : 30, background: C.panel, borderTop: `1px solid ${C.border}`,
+            flexShrink: 0, transition: "height 0.2s", display: "flex", flexDirection: "column",
+          }}>
+            <div style={{ height: 30, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", borderBottom: consoleOpen ? `1px solid ${C.border}` : "none", flexShrink: 0 }}>
+              {["Console", "Output", "Errors"].map((t, i) => (
+                <button key={t} style={{
+                  background: i === 0 ? C.accentGlow : "transparent", border: "none", borderRadius: 4,
+                  padding: "2px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700,
+                  letterSpacing: "0.07em", color: i === 0 ? C.accent : C.textFaint,
+                }}>{t}</button>
+              ))}
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                 {isAgentThinking && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.accent, boxShadow: `0 0 5px ${C.accent}` }}/>
+                      <span style={{ fontSize: 10, color: C.accent, fontWeight: 600, letterSpacing: "0.06em" }}>AGGREGATING ASSETS...</span>
+                    </div>
+                 )}
+                <button onClick={() => setConsoleOpen(o => !o)} style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer", padding: 2 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points={consoleOpen ? "18,15 12,9 6,15" : "6,9 12,15 18,9"}/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {consoleOpen && (
+              <div style={{ flex: 1, padding: "6px 12px", fontFamily: "monospace", fontSize: 11, overflow: "auto" }}>
+                <div style={{ color: C.textFaint }}><span style={{ color: C.green }}>✓</span> Process_Console attached — Worker PID {Math.floor(Math.random() * 9000) + 1000}</div>
+                {selectedObj && <div style={{ color: C.textFaint, marginTop: 4 }}><span style={{ color: C.accent }}>→</span> Entity "{selectedObj.name}" focused</div>}
+              </div>
+            )}
+          </div>
         </div>
-        
+
         {/* ── RIGHT: INSPECTOR ── */}
-        <div style={{ width: 260, background: C.panel, borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
-           <div style={{
-             height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-             borderBottom: `1px solid ${C.border}`, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textDim
-           }}>
-             Inspector
-           </div>
-           
-           <div style={{ padding: "12px", borderBottom: `1px solid ${C.border}` }}>
-             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <TypeIcon type={selectedObj?.type} />
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedObj?.name}</span>
-             </div>
-             
-             <PropRow label="Position" value="0.0, 2.0, 0.0" />
-             <PropRow label="Rotation" value="0.0, 0.0, 0.0" />
-             <PropRow label="Scale" value="1.0, 1.0, 1.0" />
-             
-             {selectedObj?.type === "mesh" && (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                   <PropRow label="Material" value="Standard" color={C.accent} />
-                   <PropRow label="Color" value="#00d4ff" color={C.accent} />
-                </div>
-             )}
-           </div>
+        <div style={{
+          width: 220, background: C.panel, borderLeft: `1px solid ${C.border}`,
+          display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden",
+        }}>
+          {/* Header */}
+          <div style={{ height: 32, display: "flex", alignItems: "center", padding: "0 10px", borderBottom: `1px solid ${C.border}`, gap: 6 }}>
+            {selectedObj ? <TypeIcon type={selectedObj.type} /> : null}
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {selectedObj?.name ?? "Inspector"}
+            </span>
+          </div>
+
+          {/* Inspector Tabs */}
+          <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, padding: "0 8px", paddingTop: 4, gap: 2 }}>
+            {["Transform", "Material", "Physics"].map(t => (
+              <button key={t} onClick={() => setInspectorTab(t)} style={{
+                background: "transparent", border: "none", borderBottom: inspectorTab === t ? `2px solid ${C.accent}` : "2px solid transparent",
+                padding: "4px 8px 6px", cursor: "pointer", fontSize: 11,
+                color: inspectorTab === t ? C.accent : C.textFaint, fontWeight: inspectorTab === t ? 600 : 400,
+                transition: "all 0.12s",
+              }}>{t}</button>
+            ))}
+          </div>
+
+          {/* Properties */}
+          <div style={{ flex: 1, padding: "12px 10px", overflow: "auto" }}>
+            {selectedObj ? (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textFaint, marginBottom: 8 }}>Position</div>
+                <PropRow label="X" value={selectedObj.x.toFixed(2)} color={C.red} />
+                <PropRow label="Y" value={selectedObj.y.toFixed(2)} color={C.green} />
+                <PropRow label="Z" value={selectedObj.z?.toFixed(2) || "0.00"} color={C.accent} />
+
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textFaint, marginBottom: 8, marginTop: 16 }}>Rotation</div>
+                <PropRow label="Y" value={`${selectedObj.rotation || 0}°`} color={C.green} />
+
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textFaint, marginBottom: 8, marginTop: 16 }}>Scale</div>
+                <PropRow label="XYZ" value={selectedObj.scale || 1} color={C.purple} />
+
+                <div style={{ height: 1, background: C.border, margin: "16px 0" }}/>
+
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textFaint, marginBottom: 8 }}>Properties</div>
+                {Object.entries(selectedObj.properties || {}).map(([key, val]) => (
+                   <PropRow key={key} label={key} value={String(val)} color={C.text} />
+                ))}
+              </>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8, color: C.textFaint }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                </svg>
+                <span style={{ fontSize: 11, textAlign: "center" }}>Select an entity<br/>to inspect</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      
+      {/* ── STATUS BAR ── */}
+      <div style={{
+        height: 22, background: C.accent, display: "flex", alignItems: "center",
+        padding: "0 12px", gap: 16, flexShrink: 0,
+      }}>
+        {[
+          { icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5", label: "main" },
+          { icon: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z", label: "3 objects" },
+          { icon: "M1 6l10.5 6L22 6M1 6v10.5a.5.5 0 00.5.5h21a.5.5 0 00.5-.5V6", label: "1 selected" },
+        ].map(({ icon, label }, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, color: "#000", fontSize: 11, fontWeight: 600 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d={icon}/></svg>
+            {label}
+          </div>
+        ))}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 14 }}>
+          {["Spatial OS v2.1", "60 fps", "WebGL 2.0"].map(item => (
+            <span key={item} style={{ fontSize: 11, fontWeight: 600, color: "#000" }}>{item}</span>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 3px; height: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e2330; border-radius: 4px; }
+        @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+      `}</style>
     </div>
   );
 }

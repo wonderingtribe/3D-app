@@ -6,7 +6,66 @@ import { createServer as createViteServer } from 'vite';
 
 async function startServer() {
   const app = express();
+  app.use(express.json()); // Add JSON parsing middleware
   const httpServer = createHttpServer(app);
+
+  // Architect AI Endpoint
+  app.post('/api/architect/generate', async (req, res) => {
+    try {
+      const { prompt, currentEntities } = req.body;
+      
+      const { GoogleGenAI, Type } = await import('@google/genai');
+      const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `You are the AetherOS Spatial Architect. 
+        Current scene entities: ${JSON.stringify(currentEntities)}
+        User request: ${prompt}
+        
+        Generate NEW entities to add to the scene based on this prompt. 
+        Entities can be 'mesh' or 'light'.
+        Mesh properties include: color, scale.
+        Light properties include: color, intensity.
+        
+        Return ONLY a JSON array of NEW entities.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                type: { type: Type.STRING, description: "mesh or light" },
+                x: { type: Type.NUMBER },
+                y: { type: Type.NUMBER },
+                z: { type: Type.NUMBER },
+                scale: { type: Type.NUMBER },
+                properties: {
+                  type: Type.OBJECT,
+                  properties: {
+                    color: { type: Type.STRING },
+                    intensity: { type: Type.NUMBER },
+                    emissive: { type: Type.BOOLEAN }
+                  }
+                }
+              },
+              required: ["name", "type", "x", "y", "z"]
+            }
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || '[]'));
+    } catch (error: any) {
+      console.error('Architect Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   const io = new Server(httpServer, {
     cors: {
       origin: "*",
