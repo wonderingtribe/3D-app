@@ -47,6 +47,10 @@ export default function AIArchitect({ onClose }: { onClose: () => void }) {
     }, 1500);
   };
 
+  const applyQuickOption = (text: string) => {
+    setPromptValue(text);
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-ui-bg/40 animate-in fade-in zoom-in duration-300">
       <div className="w-full max-w-2xl bg-ui-panel border border-ui-border rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -83,10 +87,10 @@ export default function AIArchitect({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <QuickOption icon={<Layout className="w-4 h-4" />} title="Brutalist Base" desc="Heavy stone slabs" />
-            <QuickOption icon={<Cpu className="w-4 h-4" />} title="Logic Node" desc="Functional triggers" />
-            <QuickOption icon={<Layers className="w-4 h-4" />} title="Voxel Grid" desc="Subdivided workspace" />
-            <QuickOption icon={<Palette className="w-4 h-4" />} title="Material Set" desc="Cyberpunk aesthetics" />
+            <QuickOption icon={<Layout className="w-4 h-4" />} title="Brutalist Base" desc="Heavy stone slabs" onClick={() => applyQuickOption("Build a symmetrical brutalist platform with heavy stone slab styling")} />
+            <QuickOption icon={<Cpu className="w-4 h-4" />} title="Logic Node" desc="Functional triggers" onClick={() => applyQuickOption("Generate a central logic node floating mid-air with surrounding trigger zones")} />
+            <QuickOption icon={<Layers className="w-4 h-4" />} title="Voxel Grid" desc="Subdivided workspace" onClick={() => applyQuickOption("Construct a 4x4 voxel terrain grid optimized for pathfinding")} />
+            <QuickOption icon={<Palette className="w-4 h-4" />} title="Material Set" desc="Cyberpunk aesthetics" onClick={() => applyQuickOption("Apply cyberpunk neon materials to all current standing structures")} />
           </div>
         </div>
 
@@ -110,9 +114,9 @@ export default function AIArchitect({ onClose }: { onClose: () => void }) {
   );
 }
 
-function QuickOption({ icon, title, desc }: { icon: React.ReactNode; title: string, desc: string }) {
+function QuickOption({ icon, title, desc, onClick }: { icon: React.ReactNode; title: string; desc: string; onClick: () => void }) {
   return (
-    <button className="flex items-center gap-3 p-3 bg-white/5 border border-ui-border rounded-xl hover:border-ui-accent/40 hover:bg-ui-accent/5 transition-all text-left">
+    <button onClick={onClick} className="flex items-center gap-3 p-3 bg-white/5 border border-ui-border rounded-xl hover:border-ui-accent/40 hover:bg-ui-accent/5 transition-all text-left">
       <div className="p-2 bg-ui-bg rounded-lg text-ui-text-muted">
         {icon}
       </div>

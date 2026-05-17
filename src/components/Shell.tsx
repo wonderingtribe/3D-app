@@ -10,7 +10,9 @@ import {
   Eye,
   PanelLeftClose,
   PanelLeftOpen,
-  Zap
+  Zap,
+  BrainCircuit,
+  ChevronDown
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
@@ -26,136 +28,159 @@ import AgentSidebar from './AgentSidebar';
 import WebView from './WebView';
 
 export default function Shell() {
-  const { viewMode, setViewMode, isSidebarOpen, setSidebarOpen, isAgentThinking } = useWorkspace();
+  const { viewMode, setViewMode, isSidebarOpen, setSidebarOpen, isAgentSidebarOpen, setAgentSidebarOpen, isAgentThinking, addAgentLog } = useWorkspace();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-ui-bg text-ui-text select-none">
-      {/* Dynamic Nav Rail */}
-      <div className="w-16 flex flex-col items-center py-4 bg-ui-panel border-r border-ui-border z-50">
-        <div className="w-10 h-10 bg-ui-accent rounded-xl flex items-center justify-center mb-8 shadow-lg shadow-ui-accent/20">
-          <Zap className="w-6 h-6 text-white" />
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-ui-bg text-ui-text">
+      {/* Top Navigation Bar */}
+      <header className="h-14 bg-ui-panel border-b border-ui-border flex items-center justify-between px-4 z-50 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 bg-ui-accent rounded-lg flex items-center justify-center shadow-lg shadow-ui-accent/20">
+            <Zap className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex flex-col mr-2">
+             <div className="text-[11px] font-bold text-ui-text tracking-widest uppercase">Spatial Platform</div>
+             <div className="text-[8px] text-ui-text-muted italic uppercase">Workspace Beta</div>
+          </div>
+          
+          <div className="w-px h-6 bg-ui-border" />
+          
+          <button 
+             onClick={() => setSidebarOpen(!isSidebarOpen)}
+             className={cn(
+               "flex items-center gap-2 px-3 py-1.5 text-[10px] rounded-md font-bold uppercase transition-all",
+               isSidebarOpen ? "bg-ui-accent/20 text-ui-accent border border-ui-accent/30" : "bg-ui-bg border border-ui-border text-ui-text-muted hover:bg-white/5"
+             )}
+          >
+             {isSidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5" />}
+             Assets Explorer
+          </button>
+        </div>
+
+        {/* Tab Navigation Center */}
+        <div className="flex bg-ui-bg p-1 rounded-xl border border-ui-border shadow-inner absolute left-1/2 -translate-x-1/2">
+           <TopTab label="UI Design" icon={<Layout className="w-3.5 h-3.5" />} active={viewMode === 'design'} onClick={() => setViewMode('design')} />
+           <TopTab label="Engine Setup" icon={<Cpu className="w-3.5 h-3.5" />} active={viewMode === 'engine'} onClick={() => setViewMode('engine')} />
+           <TopTab label="Spatial View" icon={<Eye className="w-3.5 h-3.5" />} active={viewMode === 'spatial'} onClick={() => setViewMode('spatial')} />
+           <TopTab label="Source Code" icon={<Code2 className="w-3.5 h-3.5" />} active={viewMode === 'code'} onClick={() => setViewMode('code')} />
+           <TopTab label="Asset Pipeline" icon={<Workflow className="w-3.5 h-3.5" />} active={viewMode === 'pipeline'} onClick={() => setViewMode('pipeline')} />
+           <div className="w-px h-6 bg-ui-border mx-2 mt-1" />
+           <TopTab label="Settings" icon={<SettingsIcon className="w-3.5 h-3.5" />} active={viewMode === 'settings'} onClick={() => setViewMode('settings' as any)} />
         </div>
         
-        <NavButton 
-          icon={<Layout className="w-5 h-5" />} 
-          label="UI Designer" 
-          active={viewMode === 'design'} 
-          onClick={() => setViewMode('design')} 
-        />
-        <NavButton 
-          icon={<Cpu className="w-5 h-5" />} 
-          label="Engine" 
-          active={viewMode === 'engine'} 
-          onClick={() => setViewMode('engine')} 
-        />
-        <NavButton 
-          icon={<Eye className="w-5 h-5" />} 
-          label="Spatial" 
-          active={viewMode === 'spatial'} 
-          onClick={() => setViewMode('spatial')} 
-        />
-        <NavButton 
-          icon={<Code2 className="w-5 h-5" />} 
-          label="Code" 
-          active={viewMode === 'code'} 
-          onClick={() => setViewMode('code')} 
-        />
-        <NavButton 
-          icon={<Workflow className="w-5 h-5" />} 
-          label="Pipeline" 
-          active={viewMode === 'pipeline'} 
-          onClick={() => setViewMode('pipeline')} 
-        />
-        
-        <div className="mt-auto">
-          <NavButton 
-            icon={<SettingsIcon className="w-5 h-5" />} 
-            label="Settings" 
-            active={false} 
-            onClick={() => {}} 
-          />
+        {/* Right CTA */}
+        <div className="flex items-center gap-3">
+            {isAgentThinking && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-ui-accent/10 border border-ui-accent/20 rounded-full animate-pulse mr-2">
+                <div className="w-1.5 h-1.5 bg-ui-accent rounded-full" />
+                <span className="text-[9px] font-bold text-ui-accent uppercase tracking-tighter">Architect Thinking...</span>
+              </div>
+            )}
+           
+           <div className="relative group">
+              <button 
+                 onClick={() => {
+                   addAgentLog("Packaging spatial application...", "thinking");
+                   setTimeout(() => {
+                     const data = JSON.stringify({ workspace: "Spatial Platform Beta", config: {}, timestamp: new Date().toISOString() }, null, 2);
+                     const blob = new Blob([data], { type: 'application/json' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = 'spatial-release.json';
+                     a.click();
+                     URL.revokeObjectURL(url);
+                     addAgentLog("Deployment complete. Released spatial-release.json", "success");
+                   }, 1000);
+                 }}
+                 className="px-5 py-2 pr-10 bg-emerald-500 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 relative"
+              >
+                Deploy Project
+                <div className="absolute right-0 top-0 bottom-0 w-8 border-l border-white/20 flex items-center justify-center">
+                   <ChevronDown className="w-3.5 h-3.5" />
+                </div>
+              </button>
+              
+              <div className="absolute right-0 top-full mt-2 w-48 bg-ui-panel border border-ui-border rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col overflow-hidden z-50">
+                <button 
+                  onClick={() => setViewMode('settings' as any)}
+                  className="px-4 py-3 text-[10px] font-bold text-left hover:bg-white/5 uppercase tracking-wider text-ui-text border-b border-ui-border"
+                >
+                  Export NPM Package
+                </button>
+                <button 
+                  onClick={() => setViewMode('settings' as any)}
+                  className="px-4 py-3 text-[10px] font-bold text-left hover:bg-white/5 uppercase tracking-wider text-ui-text"
+                >
+                  Manage API Keys
+                </button>
+              </div>
+           </div>
+           <button 
+              onClick={() => setAgentSidebarOpen(!isAgentSidebarOpen)}
+              className={cn(
+                "p-2 rounded-lg transition-colors border",
+                isAgentSidebarOpen ? "bg-ui-accent/20 text-ui-accent border-ui-accent/40" : "bg-ui-bg border-ui-border text-ui-text-muted hover:bg-white/5"
+              )}
+              title="Toggle Log Output Sidebar"
+            >
+              <BrainCircuit className="w-4 h-4" />
+            </button>
         </div>
-      </div>
+      </header>
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col relative min-w-0">
-        <div className="flex-1 flex min-w-0">
-          {/* Left Panel (File Explorer + Contextual Inspector) */}
-          {isSidebarOpen && (
-            <div className="w-64 border-r border-ui-border bg-ui-panel/50 flex flex-col animate-in slide-in-from-left duration-300">
-               <FileExplorer />
-            </div>
-          )}
-
-          {/* Core Viewport */}
-          <div className="flex-1 flex flex-col min-w-0 relative bg-ui-bg">
-            <header className="h-12 border-b border-ui-border flex items-center px-4 justify-between bg-ui-panel/30 backdrop-blur-xl">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setSidebarOpen(!isSidebarOpen)}
-                  className="p-1.5 hover:bg-white/5 rounded text-ui-text-muted transition-colors"
-                >
-                  {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
-                </button>
-                <div className="flex items-center gap-2 text-[11px] font-medium text-ui-text-muted uppercase tracking-widest">
-                  <span className="text-ui-accent opacity-50 font-bold">PROJECT_B</span>
-                  <span className="opacity-30">/</span>
-                  <span className="text-ui-text">workspace_main</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {isAgentThinking && (
-                  <div className="flex items-center gap-2 px-3 py-1 bg-ui-accent/10 border border-ui-accent/20 rounded-full animate-pulse">
-                    <div className="w-1.5 h-1.5 bg-ui-accent rounded-full" />
-                    <span className="text-[9px] font-bold text-ui-accent uppercase tracking-tighter">Architect Thinking...</span>
-                  </div>
-                )}
-                <button className="px-4 py-1.5 bg-ui-accent text-white rounded-lg text-[11px] font-bold shadow-lg shadow-ui-accent/20 hover:scale-105 transition-all">
-                  DEPLOY SPATIAL
-                </button>
-              </div>
-            </header>
-
-            <main className="flex-1 relative min-h-0 flex flex-col">
-               {viewMode === 'design' && <CanvasEditor />}
-               {viewMode === 'engine' && <EngineEditor />}
-               {viewMode === 'spatial' && <SpatialView />}
-               {viewMode === 'code' && (
-                 <div className="flex-1 flex flex-col h-full overflow-hidden">
-                    <Editor />
-                 </div>
-               )}
-               {viewMode === 'pipeline' && <GltfPipeline />}
-            </main>
-
-            <Terminal />
+      <div className="flex-1 flex overflow-hidden min-h-0 relative">
+        {/* Left Panel (File Explorer + Contextual Inspector) */}
+        {isSidebarOpen && (
+          <div className="w-64 border-r border-ui-border bg-ui-panel flex flex-col shrink-0 z-20 shadow-2xl">
+             <FileExplorer />
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Right Sidebar (Agent & Logistics) */}
-      <AgentSidebar />
+        {/* Core Viewport */}
+        <div className="flex-1 flex flex-col min-w-0 relative bg-ui-bg">
+          <main className="flex-1 relative min-h-0 flex flex-col">
+             {viewMode === 'design' && <CanvasEditor />}
+             {viewMode === 'engine' && <EngineEditor />}
+             {viewMode === 'spatial' && <SpatialView />}
+             {viewMode === 'settings' && <ProjectSettings />}
+             {viewMode === 'code' && (
+               <div className="flex-1 flex flex-col h-full overflow-hidden">
+                  <Editor />
+               </div>
+             )}
+             {viewMode === 'pipeline' && <GltfPipeline />}
+          </main>
+
+          <Terminal />
+        </div>
+
+        {/* Right Sidebar (Agent & Logistics) */}
+        {isAgentSidebarOpen && (
+          <div className="w-80 border-l border-ui-border bg-ui-panel flex flex-col shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+             <AgentSidebar />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+function TopTab({ label, icon, active, onClick }: { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
-      title={label}
       className={cn(
-        "group relative w-12 h-12 flex items-center justify-center rounded-xl mb-4 transition-all duration-300",
+        "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap",
         active 
-          ? "bg-ui-accent text-white shadow-xl shadow-ui-accent/20 scale-110" 
-          : "text-ui-text-muted hover:bg-white/5 hover:text-ui-text"
+          ? "bg-ui-accent text-white shadow" 
+          : "text-ui-text-muted hover:text-ui-text hover:bg-white/5"
       )}
     >
       {icon}
-      {active && (
-        <div className="absolute -left-4 w-1 h-6 bg-ui-accent rounded-r-full" />
-      )}
+      {label}
     </button>
   );
 }
+

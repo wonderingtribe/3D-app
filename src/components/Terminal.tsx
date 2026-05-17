@@ -28,7 +28,7 @@ export default function Terminal() {
 
   return (
     <div className={cn(
-      "w-full bg-ui-panel border-t border-ui-border transition-all duration-300 flex flex-col",
+      "w-full bg-ui-panel border-t border-ui-border transition-all duration-300 flex flex-col shrink-0",
       isOpen ? "h-64" : "h-10"
     )}>
       {/* Navbar / Toggle */}

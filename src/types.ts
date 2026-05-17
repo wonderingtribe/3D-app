@@ -1,4 +1,4 @@
-export type ViewMode = 'design' | 'engine' | 'spatial' | 'code' | 'pipeline';
+export type ViewMode = 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings';
 
 export interface FileNode {
   name: string;

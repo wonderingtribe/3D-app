@@ -19,7 +19,7 @@ export default function AgentSidebar() {
   const { agentLogs } = useWorkspace();
 
   return (
-    <div className="w-80 border-l border-ui-border bg-ui-panel/40 flex flex-col relative">
+    <div className="h-full w-full bg-ui-panel/40 flex flex-col relative">
       <div className="p-4 border-b border-ui-border flex items-center justify-between bg-ui-panel/60">
         <div className="flex items-center gap-2">
            <BrainCircuit className="w-4 h-4 text-ui-accent" />

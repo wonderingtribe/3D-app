@@ -4,11 +4,12 @@ import { Settings, Shield, Cpu, Database, Link as LinkIcon, Palette, Zap, Globe,
 import { cn } from '../lib/utils';
 
 export default function ProjectSettings() {
-  const { config, updateConfig } = useWorkspace();
+  const { config, updateConfig, entities, prefabs, addAgentLog } = useWorkspace();
 
   return (
-    <div className="flex-1 flex flex-col bg-ui-bg p-8 max-w-2xl mx-auto w-full space-y-12 py-16 overflow-y-auto">
-      <div className="space-y-4">
+    <div className="flex-1 overflow-y-auto w-full h-full relative">
+      <div className="flex flex-col bg-ui-bg p-8 max-w-3xl mx-auto w-full space-y-12 py-16">
+        <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-ui-panel rounded-2xl border border-ui-border shadow-xl">
             <Settings className="w-8 h-8 text-ui-accent" />
@@ -138,7 +139,17 @@ export default function ProjectSettings() {
                  </div>
               </div>
               <button 
-                onClick={() => alert("Building standalone web export... (Mock)")}
+                onClick={() => {
+                  const data = JSON.stringify({ config, entities, prefabs }, null, 2);
+                  const blob = new Blob([data], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'spatial-workspace-export.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  addAgentLog?.('Exported workspace bundle successfully.', 'success');
+                }}
                 className="px-4 py-2 bg-ui-accent shrink-0 text-white rounded-lg text-[10px] font-bold shadow-lg shadow-ui-accent/20 hover:scale-105 transition-all"
               >
                  EXPORT BUNDLE
@@ -156,7 +167,23 @@ export default function ProjectSettings() {
                  </div>
               </div>
               <button 
-                onClick={() => alert("Creating NPM package build... (Mock)")}
+                onClick={() => {
+                  const pkg = {
+                     name: "@project/3d-scene",
+                     version: "1.0.0",
+                     main: "index.js",
+                     workspaceConfig: config,
+                     sceneData: { entities, prefabs }
+                  };
+                  const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'package.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  addAgentLog?.('Generated NPM package configuration.', 'success');
+                }}
                 className="px-4 py-2 bg-white/5 border border-ui-border shrink-0 text-ui-text rounded-lg text-[10px] font-bold hover:bg-white/10 transition-all"
               >
                  PUBLISH PACKAGE
@@ -164,6 +191,7 @@ export default function ProjectSettings() {
            </div>
         </div>
       </div>
+     </div>
     </div>
   );
 }

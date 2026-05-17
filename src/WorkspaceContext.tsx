@@ -29,6 +29,7 @@ interface WorkspaceContextType {
   agentLogs: AgentLog[];
   viewMode: ViewMode;
   isSidebarOpen: boolean;
+  isAgentSidebarOpen: boolean;
   isAgentThinking: boolean;
   targetUrl: string;
   config: WorkspaceConfig;
@@ -48,6 +49,7 @@ interface WorkspaceContextType {
   addAgentLog: (msg: string, type?: AgentLog['type']) => void;
   setViewMode: (mode: ViewMode) => void;
   setSidebarOpen: (open: boolean) => void;
+  setAgentSidebarOpen: (open: boolean) => void;
   setTargetUrl: (url: string) => void;
   updateConfig: (updates: Partial<WorkspaceConfig>) => void;
   addPipelineItem: (item: Omit<PipelineItem, 'id' | 'status'>) => void;
@@ -73,6 +75,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   ]);
   const [viewMode, setViewMode] = useState<ViewMode>('design');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isAgentSidebarOpen, setAgentSidebarOpen] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
   const [targetUrl, setTargetUrl] = useState("https://spatial-engine-v3.dev");
   const [config, setConfig] = useState<WorkspaceConfig>(DEFAULT_CONFIG);
@@ -191,9 +194,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkspaceContext.Provider value={{
-      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId,
+      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
-      setViewMode, setSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
+      setViewMode, setSidebarOpen, setAgentSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
       setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene
     }}>
       {children}
