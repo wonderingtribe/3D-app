@@ -3,12 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --ui-bg: #09090b;
-  --ui-panel: #18181b;
-  --ui-border: #27272a;
-  --ui-text: #fafafa;
-  --ui-text-muted: #a1a1aa;
-  --ui-accent: #06b6d4;
+  --ui-bg: #0a0b0e;
+  --ui-panel: #111318;
+  --ui-border: #1e2330;
+  --ui-text: #f8fafc;
+  --ui-text-muted: #94a3b8;
+  --ui-accent: #00d4ff;
+  --ui-accent-glow: rgba(0, 212, 255, 0.15);
+  
+  --brand-blue: #3b82f6;
+  --brand-purple: #8b5cf6;
+  --brand-emerald: #10b981;
+  --brand-rose: #f43f5e;
+}
+
+@layer utilities {
+  .glow-blue { box-shadow: 0 0 25px rgba(59, 130, 246, 0.15); }
+  .glow-purple { box-shadow: 0 0 25px rgba(139, 92, 246, 0.15); }
+  .glow-emerald { box-shadow: 0 0 25px rgba(16, 185, 129, 0.15); }
+  
+  .bg-aura-blue { background: radial-gradient(circle at center, rgba(59, 130, 246, 0.04) 0%, transparent 70%); }
+  .bg-aura-purple { background: radial-gradient(circle at center, rgba(139, 92, 246, 0.04) 0%, transparent 70%); }
 }
 
 body {

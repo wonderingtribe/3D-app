@@ -24,6 +24,10 @@ const COLORS = {
   accentDim: "#00a8cc",
   accentGlow: "rgba(0,212,255,0.12)",
   accentGlow2: "rgba(0,212,255,0.06)",
+  blue: "#3b82f6",
+  purple: "#8b5cf6",
+  emerald: "#10b981",
+  rose: "#f43f5e",
   green: "#00e5a0",
   amber: "#ffb340",
   red: "#ff4d6a",
@@ -128,17 +132,20 @@ export default function Shell() {
         </div>
 
         {/* Nav Tabs */}
-        <div style={{ display: "flex", gap: 2, flex: 1, overflow: "auto" }}>
+        <div style={{ display: "flex", gap: 2, flex: 1, overflow: "auto", padding: "4px 0" }}>
           {filteredTabs.map(tab => (
             <button key={tab.id} onClick={() => setViewMode(tab.id as any)} style={{
-              background: viewMode === tab.id ? COLORS.accentGlow : "transparent",
-              border: viewMode === tab.id ? `1px solid ${COLORS.accent}44` : "1px solid transparent",
-              borderRadius: 6, padding: "5px 12px", fontSize: 12, fontWeight: viewMode === tab.id ? 600 : 400,
-              color: viewMode === tab.id ? COLORS.accent : COLORS.textDim,
-              cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
+              background: viewMode === tab.id ? `${COLORS.accent}15` : "transparent",
+              border: viewMode === tab.id ? `1px solid ${COLORS.accent}33` : "1px solid transparent",
+              borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: viewMode === tab.id ? 700 : 500,
+              color: viewMode === tab.id ? COLORS.accent : COLORS.textFaint,
+              cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              textTransform: "uppercase", letterSpacing: "0.05em",
+              boxShadow: viewMode === tab.id ? `0 0 15px ${COLORS.accent}10` : 'none',
+              transform: viewMode === tab.id ? 'translateY(-1px)' : 'none'
             }}
-            onMouseEnter={e => { if (viewMode !== tab.id) e.currentTarget.style.color = COLORS.text; }}
-            onMouseLeave={e => { if (viewMode !== tab.id) e.currentTarget.style.color = COLORS.textDim; }}
+            onMouseEnter={e => { if (viewMode !== tab.id) { e.currentTarget.style.color = COLORS.textDim; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}}
+            onMouseLeave={e => { if (viewMode !== tab.id) { e.currentTarget.style.color = COLORS.textFaint; e.currentTarget.style.background = "transparent"; }}}
             >{tab.label}</button>
           ))}
         </div>

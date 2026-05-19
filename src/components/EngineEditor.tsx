@@ -9,13 +9,19 @@ import {
   Zap,
   Globe,
   Database,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Shield,
+  BarChart4,
+  Loader2
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 
 export default function EngineEditor() {
   const { config, updateConfig, addAgentLog, setupConfig, synthesisStatus, setSynthesisStatus } = useWorkspace();
+  const [optimizationReport, setOptimizationReport] = useState<string | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleSynthesize = () => {
     setSynthesisStatus('synthesizing');
@@ -35,10 +41,37 @@ export default function EngineEditor() {
     }, 4000);
   };
 
+  const handleOptimize = async () => {
+    setIsOptimizing(true);
+    addAgentLog("Generating neural optimization pass...", "thinking");
+    try {
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Analyze this kernel configuration and provide a 3-point technical optimization report:
+          Engine: ${setupConfig?.engineVersion}
+          Modules: ${setupConfig?.hybridModules.join(', ')}
+          Deployment: ${setupConfig?.deploymentTarget}
+          Be extremely concise and technical. Use markdown.`,
+          history: [],
+          context: { pods: [], scenes: [], viewMode: 'engine' }
+        })
+      });
+      const data = await response.json();
+      setOptimizationReport(data.content);
+      addAgentLog("Optimization report generated", "success");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden bg-[#050608]">
       <div className="w-64 border-r border-white/5 flex flex-col bg-[#0c0d12]">
-        <div className="p-4 border-b border-white/5">
+        <div className="p-4 border-b border-white/5 bg-gradient-to-b from-blue-500/5 to-transparent">
           <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 block">Synthesized Modules</label>
           <div className="space-y-1">
             {setupConfig?.hybridModules.map(m => (
@@ -48,39 +81,86 @@ export default function EngineEditor() {
         </div>
         
         <div className="p-4 bg-white/[0.01] flex-1">
-          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3 block">Deployment Core</label>
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-[11px] font-black text-blue-400 uppercase tracking-widest text-center">
-             {setupConfig?.deploymentTarget?.replace(/-/g, '_')}
+          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3 block text-center">Neural Link Stats</label>
+          <div className="space-y-4">
+             <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl">
+                <div className="text-[9px] font-bold text-blue-400 uppercase text-center mb-1">Deployment Core</div>
+                <div className="text-[11px] font-black text-white uppercase tracking-widest text-center">
+                   {setupConfig?.deploymentTarget?.replace(/-/g, '_')}
+                </div>
+             </div>
+             
+             <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-xl">
+                <div className="text-[9px] font-bold text-purple-400 uppercase text-center mb-1">Entropy Load</div>
+                <div className="text-[11px] font-black text-white uppercase tracking-widest text-center">
+                   MINIMAL_3%
+                </div>
+             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col relative overflow-auto">
+      <div className="flex-1 flex flex-col relative overflow-auto bg-aura-blue">
         <div className="p-12 max-w-4xl mx-auto w-full space-y-12">
           <div className="space-y-6">
             <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-[2rem] border border-blue-500/20 flex items-center justify-center shadow-2xl shadow-blue-500/10">
-                {synthesisStatus === 'synthesizing' ? <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" /> : <Cpu className="w-8 h-8 text-blue-500" />}
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] border border-white/10 flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.3)]">
+                {synthesisStatus === 'synthesizing' ? <RefreshCw className="w-8 h-8 text-white animate-spin" /> : <Cpu className="w-8 h-8 text-white" />}
               </div>
               <div>
-                <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Hybrid_Kernel_Orchestration</h1>
-                <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mt-1">Status: {synthesisStatus.toUpperCase()}</p>
+                <h1 className="text-3xl font-black text-white uppercase tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-500">Hybrid_Kernel_Orchestration</h1>
+                <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
+                   Status: <span className={cn(synthesisStatus === 'complete' ? "text-emerald-400" : "text-blue-400")}>{synthesisStatus.toUpperCase()}</span>
+                </p>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               <StatCard label="Memory Usage" value="1.24 GB" icon={<Database className="w-4 h-4 text-purple-400" />} />
               <StatCard label="Synthesis Latency" value="1.4s" icon={<Globe className="w-4 h-4 text-emerald-400" />} />
+              <StatCard label="Active Workers" value="12 Nodes" icon={<BarChart4 className="w-4 h-4 text-blue-400" />} />
             </div>
           </div>
 
-          <div className="space-y-8">
-            <SectionHeader title="Synthesis Parameters" icon={<Settings className="w-4 h-4" />} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <ConfigCard title="Telemetry Stream" desc="Real-time kernel profiling endpoint" value={setupConfig?.sources.telemetry} />
-               <ConfigCard title="Asset Bus" desc="Content delivery network link" value={setupConfig?.sources.assets} />
-               <ConfigCard title="Engine Kernel" desc="Target spatial runtime source" value={setupConfig?.sources.engine} />
-               <ConfigCard title="Version Control" desc="Kernel semantic versioning" value={setupConfig?.engineVersion} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2 space-y-8">
+              <SectionHeader title="Synthesis Parameters" icon={<Settings className="w-4 h-4" />} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <ConfigCard title="Telemetry Stream" desc="Real-time kernel profiling" value={setupConfig?.sources.telemetry} />
+                 <ConfigCard title="Asset Bus" desc="Content delivery network" value={setupConfig?.sources.assets} />
+                 <ConfigCard title="Engine Kernel" desc="Spatial runtime source" value={setupConfig?.sources.engine} />
+                 <ConfigCard title="Version Control" desc="Semantic versioning" value={setupConfig?.engineVersion} />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+               <SectionHeader title="AI Oversight" icon={<Sparkles className="w-4 h-4" />} />
+               <div className="bg-[#0c0d12]/60 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5" />
+                  <div className="relative z-10 space-y-4">
+                     {optimizationReport ? (
+                       <div className="text-[11px] text-zinc-300 leading-relaxed max-h-[300px] overflow-auto pr-2 custom-scrollbar markdown-body">
+                          {optimizationReport}
+                       </div>
+                     ) : (
+                       <div className="text-center py-8">
+                          <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                             <Shield className="w-5 h-5 text-zinc-600" />
+                          </div>
+                          <p className="text-[10px] text-zinc-500 uppercase font-bold">No Optimization Active</p>
+                       </div>
+                     )}
+                     
+                     <button 
+                       onClick={handleOptimize}
+                       disabled={isOptimizing}
+                       className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-zinc-300 rounded-lg flex items-center justify-center gap-2 transition-all"
+                     >
+                        {isOptimizing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        Run AI Audit
+                     </button>
+                  </div>
+               </div>
             </div>
           </div>
 

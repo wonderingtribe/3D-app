@@ -14,7 +14,10 @@ import {
   Zap,
   Network,
   Globe,
-  Settings
+  Settings,
+  Sparkles,
+  Command,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { WorkspaceSetup, DeploymentTarget } from '../types';
@@ -25,6 +28,8 @@ type Step = 'orchestration' | 'connectivity' | 'deployment' | 'synthesis';
 export default function SetupGate() {
   const { completeSetup } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<Step>('orchestration');
+  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
   
   // Setup State
   const [engine, setEngine] = useState<WorkspaceSetup['engineVersion']>('v3-stable');
@@ -61,6 +66,45 @@ export default function SetupGate() {
     }
   };
 
+  const handleAiSuggest = async () => {
+    setIsAiSuggesting(true);
+    try {
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Suggest a kernel configuration for this project goal: "${aiPrompt}". 
+          Pick one engine from: v3-stable, v4-beta, v2-legacy, hybrid-custom.
+          Pick modules from: wasi, assets, multiplayer, physics, compiler, mesh-opt.
+          Return ONLY JSON in this format: {"engine": "...", "modules": ["...", "..."], "reasoning": "..."}`,
+          history: [],
+          context: { pods: [], scenes: [], viewMode: 'setup' }
+        })
+      });
+
+      if (!response.ok) throw new Error('AI suggestion failed');
+      const data = await response.json();
+      
+      // Handle markdown code block if present
+      const cleanJson = data.content.includes('```json') 
+        ? data.content.split('```json')[1].split('```')[0].trim()
+        : data.content.includes('```')
+          ? data.content.split('```')[1].split('```')[0].trim()
+          : data.content.trim();
+          
+      const suggestion = JSON.parse(cleanJson);
+      
+      setEngine(suggestion.engine as any);
+      setHybridModules(suggestion.modules);
+      setAiPrompt("");
+      // Show some feedback or log if needed
+    } catch (error) {
+      console.error('AI Suggestion Error:', error);
+    } finally {
+      setIsAiSuggesting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-[#0d0f12] flex flex-col font-sans selection:bg-[#00b8ff]/30 selection:text-[#00b8ff] text-[#e2e8f0]">
       {/* GLOBAL HUD STYLES */}
@@ -78,23 +122,28 @@ export default function SetupGate() {
       `}} />
 
       {/* TOP NAV */}
-      <nav className="h-[52px] bg-[#13161b] border-b border-[#1f242d] px-6 flex items-center justify-between shrink-0 sticky top-0 z-[100]">
+      <nav className="h-[52px] bg-[#13161b]/80 backdrop-blur-md border-b border-[#1f242d] px-6 flex items-center justify-between shrink-0 sticky top-0 z-[100]">
         <div className="flex items-center gap-5">
            <a href="#" className="flex items-center gap-2 font-mono text-[13px] font-semibold text-[#e2e8f0] no-underline">
-              <div className="w-[26px] h-[26px] bg-gradient-to-br from-[#00b8ff] to-[#0077ff] rounded-md flex items-center justify-center text-[11px] text-white font-bold">S</div>
+              <div className="w-[26px] h-[26px] bg-gradient-to-br from-[#00b8ff] via-[#0077ff] to-[#a78bfa] rounded-md flex items-center justify-center text-[11px] text-white font-bold shadow-[0_0_15px_rgba(0,184,255,0.3)]">S</div>
               Spatial_IDE <span className="text-[#8b95a8] font-normal">/ workspace</span>
            </a>
            <div className="nav-divider-v" />
-           <span className="font-mono text-[11px] text-[#00b8ff] bg-[#00b8ff]/15 border border-[#00b8ff]/20 px-2.5 py-0.5 rounded-md">Kernel v9.0.Hybrid</span>
+           <span className="font-mono text-[11px] text-[#00b8ff] bg-[#00b8ff]/10 border border-[#00b8ff]/20 px-2.5 py-0.5 rounded-md shadow-[0_0_10px_rgba(0,184,255,0.1)]">Kernel v9.0.Hybrid</span>
         </div>
         <div className="flex items-center gap-2.5">
-           <button className="nav-btn-user">Docs</button>
-           <button className="nav-btn-user">Settings</button>
-           <button className="nav-btn-user text-[#00b8ff] border-[#00b8ff]/30">Deploy</button>
+           <button className="nav-btn-user hover:bg-white/5 transition-colors">Docs</button>
+           <button className="nav-btn-user hover:bg-white/5 transition-colors">Settings</button>
+           <button className="nav-btn-user text-[#00b8ff] border-[#00b8ff]/30 hover:bg-[#00b8ff]/10 transition-colors">Deploy</button>
         </div>
       </nav>
 
-      <div className="flex-1 grid grid-cols-[220px_1fr_280px] min-h-0 container-custom">
+      <div className="flex-1 grid grid-cols-[220px_1fr_280px] min-h-0 container-custom relative">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+           <div className="absolute -top-[20%] -left-[10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+           <div className="absolute top-[30%] -right-[10%] w-[35%] h-[40%] bg-purple-500/5 blur-[100px] rounded-full" />
+           <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[35%] bg-emerald-500/5 blur-[120px] rounded-full" />
+        </div>
         
         {/* SIDEBAR: BUILD PHASES */}
         <aside className="bg-[#13161b] border-r border-[#1f242d] py-5 flex flex-col overflow-y-auto no-scrollbar">
@@ -159,67 +208,101 @@ export default function SetupGate() {
               {/* STEP RENDERERS */}
               <AnimatePresence mode="wait">
                 <motion.div key={currentStep} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-16">
-                  <section>
-                    <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
-                       <span className="text-[#00b8ff]">01.</span> Primary Engine Base
-                    </div>
-                    <div className="grid grid-cols-2 gap-6 mb-2">
-                       <EngineCard 
-                         selected={engine === 'v3-stable'} 
-                         onClick={() => {}} 
-                         onDoubleClick={() => setEngine('v3-stable')}
-                         version="V3 Pro" 
-                         name="Production Engine" 
-                         tag="GLTF / WebVR / Stable" 
-                         desc="The industry standard for high-fidelity web experiences. Optimized for stable frame rates and cross-platform compatibility."
-                         accent="blue" 
-                       />
-                       <EngineCard 
-                         selected={engine === 'v4-beta'} 
-                         onClick={() => {}} 
-                         onDoubleClick={() => setEngine('v4-beta')}
-                         version="V4 Hyper" 
-                         name="Neural Engine" 
-                         tag="Ray-Tracing / Experimental" 
-                         desc="Leverage WebGPU and neural denoising for cinematic fidelity. Supports real-time ray-traced reflections and global illumination."
-                         accent="yellow" 
-                       />
-                       <EngineCard 
-                         selected={engine === 'v2-legacy'} 
-                         onClick={() => {}} 
-                         onDoubleClick={() => setEngine('v2-legacy')}
-                         version="V2 Lite" 
-                         name="Edge Engine" 
-                         tag="Optimized / Low-latency" 
-                         desc="Ultra-lightweight binary optimized for edge devices and low-bandwidth environments. Maximum performance with minimal footprint."
-                         accent="green" 
-                       />
-                       <EngineCard 
-                         selected={engine === 'hybrid-custom'} 
-                         onClick={() => {}} 
-                         onDoubleClick={() => setEngine('hybrid-custom')}
-                         version="Hybrid" 
-                         name="Manual Synthesis" 
-                         tag="Custom / Full control" 
-                         desc="Synthesize a bespoke kernel by manually bridging modules. Recommended for advanced architecture and custom rendering pipelines."
-                         accent="purple" 
-                       />
-                    </div>
-                  </section>
+                  {currentStep === 'orchestration' && (
+                    <>
+                    <section>
+                      <div className="bg-[#1a1e25]/50 border border-white/5 rounded-2xl p-6 mb-8 relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative z-10 flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                              <Sparkles size={20} />
+                           </div>
+                           <div className="flex-1">
+                              <h3 className="text-sm font-bold text-white mb-1 uppercase tracking-wider">AI Synthesis Assistant</h3>
+                              <p className="text-xs text-[#94a3b8] font-medium">Describe your project goal and let Gemini suggest the optimal kernel stack.</p>
+                           </div>
+                        </div>
+                        <div className="mt-4 relative flex items-center">
+                           <input 
+                             type="text" 
+                             placeholder="Describe project (e.g. 'Multiplayer ray-traced dungeon explorer')"
+                             className="w-full bg-[#0d0f12] border border-white/10 rounded-xl py-3 pl-4 pr-32 text-xs text-white outline-none focus:border-blue-500/50 transition-all font-medium"
+                             value={aiPrompt}
+                             onChange={(e) => setAiPrompt(e.target.value)}
+                             onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
+                           />
+                           <button 
+                             onClick={handleAiSuggest}
+                             disabled={!aiPrompt.trim() || isAiSuggesting}
+                             className="absolute right-1.5 px-4 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
+                           >
+                             {isAiSuggesting ? <Loader2 size={12} className="animate-spin" /> : 'Suggest'}
+                           </button>
+                        </div>
+                      </div>
 
-                  <section>
-                    <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d]">
-                       <span className="text-[#00b8ff]">02.</span> Integration Modules
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                       <ModuleToggle label="WASI Engine" icon="⚡" on={hybridModules.includes('wasi')} onClick={() => toggleModule('wasi')} />
-                       <ModuleToggle label="Asset Stream" icon="📦" on={hybridModules.includes('assets')} onClick={() => toggleModule('assets')} />
-                       <ModuleToggle label="Multi-User" icon="👥" on={hybridModules.includes('multiplayer')} onClick={() => toggleModule('multiplayer')} />
-                       <ModuleToggle label="GPU Physics" icon="🎮" on={hybridModules.includes('physics')} onClick={() => toggleModule('physics')} />
-                       <ModuleToggle label="Live Compiler" icon="◈" on={hybridModules.includes('compiler')} onClick={() => toggleModule('compiler')} />
-                       <ModuleToggle label="Mesh Opt" icon="◉" on={hybridModules.includes('mesh-opt')} onClick={() => toggleModule('mesh-opt')} />
-                    </div>
-                  </section>
+                      <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
+                         <span className="text-[#00b8ff]">01.</span> Primary Engine Base
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 mb-2">
+                         <EngineCard 
+                           selected={engine === 'v3-stable'} 
+                           onClick={() => {}} 
+                           onDoubleClick={() => setEngine('v3-stable')}
+                           version="V3 Pro" 
+                           name="Production Engine" 
+                           tag="GLTF / WebVR / Stable" 
+                           desc="The industry standard for high-fidelity web experiences. Optimized for stable frame rates and cross-platform compatibility."
+                           accent="blue" 
+                         />
+                         <EngineCard 
+                           selected={engine === 'v4-beta'} 
+                           onClick={() => {}} 
+                           onDoubleClick={() => setEngine('v4-beta')}
+                           version="V4 Hyper" 
+                           name="Neural Engine" 
+                           tag="Ray-Tracing / Experimental" 
+                           desc="Leverage WebGPU and neural denoising for cinematic fidelity. Supports real-time ray-traced reflections and global illumination."
+                           accent="yellow" 
+                         />
+                         <EngineCard 
+                           selected={engine === 'v2-legacy'} 
+                           onClick={() => {}} 
+                           onDoubleClick={() => setEngine('v2-legacy')}
+                           version="V2 Lite" 
+                           name="Edge Engine" 
+                           tag="Optimized / Low-latency" 
+                           desc="Ultra-lightweight binary optimized for edge devices and low-bandwidth environments. Maximum performance with minimal footprint."
+                           accent="green" 
+                         />
+                         <EngineCard 
+                           selected={engine === 'hybrid-custom'} 
+                           onClick={() => {}} 
+                           onDoubleClick={() => setEngine('hybrid-custom')}
+                           version="Hybrid" 
+                           name="Manual Synthesis" 
+                           tag="Custom / Full control" 
+                           desc="Synthesize a bespoke kernel by manually bridging modules. Recommended for advanced architecture and custom rendering pipelines."
+                           accent="purple" 
+                         />
+                      </div>
+                    </section>
+
+                    <section>
+                      <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d]">
+                         <span className="text-[#00b8ff]">02.</span> Integration Modules
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                         <ModuleToggle label="WASI Engine" icon="⚡" on={hybridModules.includes('wasi')} onClick={() => toggleModule('wasi')} />
+                         <ModuleToggle label="Asset Stream" icon="📦" on={hybridModules.includes('assets')} onClick={() => toggleModule('assets')} />
+                         <ModuleToggle label="Multi-User" icon="👥" on={hybridModules.includes('multiplayer')} onClick={() => toggleModule('multiplayer')} />
+                         <ModuleToggle label="GPU Physics" icon="🎮" on={hybridModules.includes('physics')} onClick={() => toggleModule('physics')} />
+                         <ModuleToggle label="Live Compiler" icon="◈" on={hybridModules.includes('compiler')} onClick={() => toggleModule('compiler')} />
+                         <ModuleToggle label="Mesh Opt" icon="◉" on={hybridModules.includes('mesh-opt')} onClick={() => toggleModule('mesh-opt')} />
+                      </div>
+                    </section>
+                    </>
+                  )}
                 </motion.div>
               </AnimatePresence>
 
