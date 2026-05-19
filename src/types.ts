@@ -87,9 +87,12 @@ export interface Scene {
   timestamp: number;
 }
 
+export type DeploymentTarget = 'k8s-pod' | 'k8s-dev-container' | 'k8s-deployment' | 'docker-container' | 'docker-image' | 'local-process';
+
 export interface WorkspaceSetup {
   engineVersion: 'v3-stable' | 'v4-beta' | 'v2-legacy' | 'hybrid-custom';
   editorMode: 'full' | 'code-lite' | 'spatial-only';
+  deploymentTarget: DeploymentTarget;
   hybridModules: string[];
   sources: {
     engine?: string;

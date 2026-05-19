@@ -12,7 +12,7 @@ import ProjectSettings from './ProjectSettings';
 import AgentSidebar from './AgentSidebar';
 import KubernetesView from './KubernetesView';
 import AIAssistant from './AIAssistant';
-import { ChevronDown, BrainCircuit, Box, Sparkles } from 'lucide-react';
+import { ChevronDown, BrainCircuit, Box, Sparkles, Layers } from 'lucide-react';
 
 const COLORS = {
   bg: "#0a0b0e",
@@ -27,9 +27,9 @@ const COLORS = {
   green: "#00e5a0",
   amber: "#ffb340",
   red: "#ff4d6a",
-  text: "#e2e8f0",
-  textDim: "#8892a4",
-  textFaint: "#4a5568",
+  text: "#f8fafc",
+  textDim: "#cbd5e1",
+  textFaint: "#94a3b8",
 };
 
 const NAV_TABS = [
@@ -44,8 +44,48 @@ const NAV_TABS = [
 ];
 
 export default function Shell() {
-  const { viewMode, setViewMode, isSidebarOpen, setSidebarOpen, isAgentSidebarOpen, setAgentSidebarOpen, isAgentThinking, addAgentLog, setupConfig } = useWorkspace();
+  const { 
+    viewMode, 
+    setViewMode, 
+    isSidebarOpen, 
+    setSidebarOpen, 
+    isAgentSidebarOpen, 
+    setAgentSidebarOpen, 
+    isAgentThinking, 
+    addAgentLog, 
+    setupConfig,
+    hybridSplit,
+    setHybridSplit
+  } = useWorkspace();
   const [deployOpen, setDeployOpen] = useState(false);
+
+  // Split View Implementation
+  const renderMainContent = () => {
+    if (hybridSplit && (viewMode === 'code' || viewMode === 'spatial')) {
+      return (
+        <div style={{ flex: 1, display: "flex", height: "100%", overflow: "hidden" }}>
+           <div style={{ flex: 1, borderRight: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column" }}>
+              <Editor />
+           </div>
+           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <SpatialView />
+           </div>
+        </div>
+      );
+    }
+
+    switch(viewMode) {
+      case 'design': return <CanvasEditor />;
+      case 'engine': return <EngineEditor />;
+      case 'spatial': return <SpatialView />;
+      case 'settings': return <ProjectSettings />;
+      case 'code': return <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}><Editor /></div>;
+      case 'pipeline': return <GltfPipeline />;
+      case 'infrastructure': return <KubernetesView />;
+      case 'assistant': return <AIAssistant />;
+      default: return <SpatialView />;
+    }
+  };
 
   const filteredTabs = NAV_TABS.filter(tab => {
     if (!setupConfig) return true;
@@ -80,8 +120,10 @@ export default function Shell() {
             <Box size={16} color="white" />
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.2, textTransform: "uppercase" }}>Spatial Hybrid IDE</div>
-            <div style={{ fontSize: 9, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>Kernel: {setupConfig?.engineVersion || 'V3 STABLE'}</div>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.2, textTransform: "uppercase" }}>Spatial_IDE</div>
+            <div style={{ fontSize: 9, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>
+              Kernel: {setupConfig?.engineVersion?.toUpperCase() || 'V9.0.HYBRID'} • Runtime: {setupConfig?.deploymentTarget?.toUpperCase().replace(/-/g, '_') || 'LOCAL'}
+            </div>
           </div>
         </div>
 
@@ -104,6 +146,22 @@ export default function Shell() {
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
           
+           {(viewMode === 'code' || viewMode === 'spatial') && (
+             <button 
+               onClick={() => setHybridSplit(!hybridSplit)}
+               style={{
+                background: hybridSplit ? COLORS.accentGlow : "transparent",
+                border: `1px solid ${hybridSplit ? COLORS.accent : COLORS.border}`,
+                borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700,
+                color: hybridSplit ? COLORS.accent : COLORS.textDim, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s"
+               }}
+             >
+                <Layers size={14} />
+                {hybridSplit ? "HYBRID_SPLIT: ON" : "HYBRID_SPLIT: OFF"}
+             </button>
+           )}
+
            {isAgentThinking && (
              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", background: COLORS.accentGlow, borderRadius: 20, border: `1px solid ${COLORS.accent}44` }}>
                <div style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.accent }} className="animate-pulse" />
@@ -217,18 +275,7 @@ export default function Shell() {
         {/* EDITOR AREA */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, position: "relative" }}>
            <main style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
-             {viewMode === 'design' && <CanvasEditor />}
-             {viewMode === 'engine' && <EngineEditor />}
-             {viewMode === 'spatial' && <SpatialView />}
-             {viewMode === 'settings' && <ProjectSettings />}
-             {viewMode === 'code' && (
-               <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-                  <Editor />
-               </div>
-             )}
-             {viewMode === 'pipeline' && <GltfPipeline />}
-             {viewMode === 'infrastructure' && <KubernetesView />}
-             {viewMode === 'assistant' && <AIAssistant />}
+             {renderMainContent()}
            </main>
 
            <Terminal />

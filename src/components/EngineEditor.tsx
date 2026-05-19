@@ -8,136 +8,119 @@ import {
   Box, 
   Zap,
   Globe,
-  Database
+  Database,
+  RefreshCw
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 
 export default function EngineEditor() {
-  const { config, updateConfig, addAgentLog, setupConfig } = useWorkspace();
-  const [isCompiling, setIsCompiling] = useState(false);
+  const { config, updateConfig, addAgentLog, setupConfig, synthesisStatus, setSynthesisStatus } = useWorkspace();
 
-  const simulateCompile = () => {
-    setIsCompiling(true);
-    addAgentLog(`Compiling engine source for target: ${config.engine} (${setupConfig?.engineVersion || 'Stable'})`, 'info');
+  const handleSynthesize = () => {
+    setSynthesisStatus('synthesizing');
+    addAgentLog(`Initiating hybrid synthesis sequence for ${setupConfig?.engineVersion}...`, 'thinking');
+    
     setTimeout(() => {
-      setIsCompiling(false);
-      addAgentLog(`Engine build successful. Native extensions initialized.`, 'success');
-    }, 2000);
+      addAgentLog(`Merging modules: ${setupConfig?.hybridModules.join(', ')}`, 'info');
+    }, 1000);
+
+    setTimeout(() => {
+      addAgentLog(`Kernel optimization pass complete`, 'info');
+    }, 2500);
+
+    setTimeout(() => {
+      setSynthesisStatus('complete');
+      addAgentLog(`Hybrid Engine Synthesized Successfully`, 'success');
+    }, 4000);
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-ui-bg">
-      <div className="w-64 border-r border-ui-border flex flex-col bg-ui-panel/30">
-        <div className="p-4 border-b border-ui-border">
-          <label className="text-[10px] font-bold text-ui-text uppercase tracking-[0.2em] mb-4 block">Core Modules</label>
+    <div className="flex-1 flex overflow-hidden bg-[#050608]">
+      <div className="w-64 border-r border-white/5 flex flex-col bg-[#0c0d12]">
+        <div className="p-4 border-b border-white/5">
+          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 block">Synthesized Modules</label>
           <div className="space-y-1">
-            <ModuleItem label="Physics_PhysX" active />
-            <ModuleItem label="Audio_WebAudio" active />
-            <ModuleItem label="Render_VulkanProxy" />
-            <ModuleItem label="Script_GeminiVM" active />
+            {setupConfig?.hybridModules.map(m => (
+              <ModuleItem key={m} label={m.toUpperCase()} active />
+            ))}
           </div>
         </div>
         
-        <div className="p-4 bg-ui-panel/20 flex-1">
-          <label className="text-[10px] font-bold text-ui-text-muted uppercase tracking-widest mb-3 block">Compiler Target</label>
-          <div className="space-y-2">
-            <RadioOption 
-              selected={config.engine === 'three'} 
-              label="Three.js Fiber" 
-              onClick={() => updateConfig({ engine: 'three' })} 
-            />
-            <RadioOption 
-              selected={config.engine === 'babylon'} 
-              label="Babylon Native" 
-              onClick={() => updateConfig({ engine: 'babylon' })} 
-            />
-            <RadioOption 
-              selected={config.engine === 'playcanvas'} 
-              label="PlayCanvas Web" 
-              onClick={() => updateConfig({ engine: 'playcanvas' })} 
-            />
-            <RadioOption 
-              selected={config.engine === 'unity-webgl'} 
-              label="Unity WebGL" 
-              onClick={() => updateConfig({ engine: 'unity-webgl' })} 
-            />
-            <RadioOption 
-              selected={config.engine === 'unreal'} 
-              label="Unreal Engine (Pixel Stream/WebGL)" 
-              onClick={() => {
-                updateConfig({ engine: 'unreal' });
-              }} 
-            />
+        <div className="p-4 bg-white/[0.01] flex-1">
+          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3 block">Deployment Core</label>
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-[11px] font-black text-blue-400 uppercase tracking-widest text-center">
+             {setupConfig?.deploymentTarget?.replace(/-/g, '_')}
           </div>
-          {config.engine === 'unreal' && (
-            <div className="mt-4 p-3 bg-ui-accent/10 border border-ui-accent/20 rounded text-[10px] text-ui-text-muted leading-relaxed">
-              <span className="font-bold text-ui-accent">Unreal Selected:</span> This setting prepares the scene graph to sync with a remote Unreal Engine backend via Pixel Streaming, or export as Unreal WebGL.
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col relative">
-        <div className="p-8 max-w-2xl mx-auto w-full space-y-12 py-16">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-ui-accent/20 rounded-2xl border border-ui-accent/30 shadow-2xl shadow-ui-accent/10">
-                <Cpu className="w-8 h-8 text-ui-accent" />
+      <div className="flex-1 flex flex-col relative overflow-auto">
+        <div className="p-12 max-w-4xl mx-auto w-full space-y-12">
+          <div className="space-y-6">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-blue-500/10 rounded-[2rem] border border-blue-500/20 flex items-center justify-center shadow-2xl shadow-blue-500/10">
+                {synthesisStatus === 'synthesizing' ? <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" /> : <Cpu className="w-8 h-8 text-blue-500" />}
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Engine Core Configuration</h1>
-                <p className="text-ui-text-muted text-sm italic">Manage low-level spatial runtime parameters.</p>
+                <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Hybrid_Kernel_Orchestration</h1>
+                <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mt-1">Status: {synthesisStatus.toUpperCase()}</p>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <StatCard label="Memory Usage" value="124.5MB" icon={<Database className="w-4 h-4 text-purple-400" />} />
-              <StatCard label="Network Latency" value="12ms" icon={<Globe className="w-4 h-4 text-emerald-400" />} />
+            <div className="grid grid-cols-2 gap-6">
+              <StatCard label="Memory Usage" value="1.24 GB" icon={<Database className="w-4 h-4 text-purple-400" />} />
+              <StatCard label="Synthesis Latency" value="1.4s" icon={<Globe className="w-4 h-4 text-emerald-400" />} />
             </div>
           </div>
 
-          <div className="space-y-6">
-            <SectionHeader title="Runtime Preferences" icon={<Settings className="w-4 h-4" />} />
-            <div className="space-y-4 bg-ui-panel border border-ui-border rounded-2xl p-6 shadow-xl">
-               <ToggleOption 
-                 label="Local Dev Server" 
-                 active={config.localDev || false} 
-                 onChange={(v) => updateConfig({ localDev: v })} 
-                 desc="Serve engine modules from localhost:3000"
-               />
-               <div className="h-[1px] bg-ui-border mx--6" />
-               <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-ui-text-muted uppercase">Custom Engine URL</label>
-                  <div className="flex gap-2">
-                    <input 
-                      className="flex-1 bg-ui-bg border border-ui-border rounded-lg p-2 text-[11px] text-ui-text outline-none focus:border-ui-accent font-mono"
-                      placeholder="https://cdn.spatial.io/v4/engine.js"
-                      value={config.customEngineUrl}
-                      onChange={(e) => updateConfig({ customEngineUrl: e.target.value })}
-                    />
-                    <button className="px-4 py-2 bg-white/5 border border-ui-border rounded-lg text-[10px] font-bold hover:bg-white/10">CHECK_URL</button>
-                  </div>
-               </div>
+          <div className="space-y-8">
+            <SectionHeader title="Synthesis Parameters" icon={<Settings className="w-4 h-4" />} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <ConfigCard title="Telemetry Stream" desc="Real-time kernel profiling endpoint" value={setupConfig?.sources.telemetry} />
+               <ConfigCard title="Asset Bus" desc="Content delivery network link" value={setupConfig?.sources.assets} />
+               <ConfigCard title="Engine Kernel" desc="Target spatial runtime source" value={setupConfig?.sources.engine} />
+               <ConfigCard title="Version Control" desc="Kernel semantic versioning" value={setupConfig?.engineVersion} />
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
-             <button className="px-6 py-2.5 border border-ui-border text-ui-text-muted rounded-xl text-[12px] font-bold hover:bg-white/5 transition-all">REVERT_VARS</button>
-             <button 
-               onClick={simulateCompile}
-               disabled={isCompiling}
-               className={cn(
-                 "px-8 py-2.5 bg-ui-accent text-white rounded-xl text-[12px] font-bold shadow-xl shadow-ui-accent/20 transition-all flex items-center gap-3",
-                 isCompiling ? "opacity-50 scale-95" : "hover:scale-105 active:scale-95"
-               )}
-             >
-               {isCompiling ? <Zap className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-               {isCompiling ? "COMPILING..." : "BUILD_ENGINE"}
-             </button>
+          <div className="pt-10 flex border-t border-white/5 justify-between items-center">
+             <div className="flex items-center gap-3">
+                <div className={cn("w-3 h-3 rounded-full", synthesisStatus === 'complete' ? "bg-emerald-500" : "bg-zinc-800")} />
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Compiler_Link: {synthesisStatus === 'complete' ? 'READY' : 'STANDBY'}</span>
+             </div>
+             <div className="flex gap-4">
+                <button className="px-8 py-3 border border-white/10 text-zinc-500 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:text-white hover:bg-white/5 transition-all">FLUSH_CACHE</button>
+                <button 
+                  onClick={handleSynthesize}
+                  disabled={synthesisStatus === 'synthesizing'}
+                  className={cn(
+                    "px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center gap-3",
+                    synthesisStatus === 'synthesizing' 
+                      ? "bg-zinc-800 text-zinc-500" 
+                      : "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.03] active:scale-95"
+                  )}
+                >
+                  {synthesisStatus === 'synthesizing' ? "SYNTHESIZING..." : "INITIATE_SYNTHESIS"}
+                  <Zap className={cn("w-4 h-4", synthesisStatus === 'synthesizing' && "animate-pulse")} />
+                </button>
+             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConfigCard({ title, desc, value }: any) {
+  return (
+    <div className="p-6 bg-[#0c0d12] border border-white/5 rounded-[2rem] space-y-3 group hover:border-blue-500/20 transition-all">
+       <div className="flex items-center justify-between">
+          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{title}</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40 group-hover:bg-blue-500 transition-colors" />
+       </div>
+       <div className="text-[11px] font-bold text-white truncate font-mono">{value || 'UNSET'}</div>
+       <p className="text-[9px] text-zinc-600 font-bold uppercase">{desc}</p>
     </div>
   );
 }

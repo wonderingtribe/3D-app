@@ -41,6 +41,10 @@ interface WorkspaceContextType {
   pods: Pod[];
   isSetupComplete: boolean;
   setupConfig: WorkspaceSetup | null;
+  hybridSplit: boolean;
+  synthesisStatus: 'idle' | 'synthesizing' | 'complete';
+  setHybridSplit: (val: boolean) => void;
+  setSynthesisStatus: (status: 'idle' | 'synthesizing' | 'complete') => void;
   
   setFiles: (files: FileNode[]) => void;
   completeSetup: (setup: WorkspaceSetup) => void;
@@ -107,6 +111,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [currentSceneId, setCurrentSceneId] = useState<string | null>('s1');
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
+  const [hybridSplit, setHybridSplit] = useState(false);
+  const [synthesisStatus, setSynthesisStatus] = useState<'idle' | 'synthesizing' | 'complete'>('idle');
 
   // Persistence Logic
   useEffect(() => {
@@ -317,10 +323,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const completeSetup = (setup: WorkspaceSetup) => {
     setSetupConfig(setup);
     setIsSetupComplete(true);
-    addAgentLog(`Workspace initialized with ${setup.engineVersion} and ${setup.editorMode} mode`, 'success');
+    localStorage.setItem('spatial_setup', JSON.stringify(setup));
+    addAgentLog(`Workspace initialized: ${setup.engineVersion} / ${setup.editorMode}`, 'success');
     
+    // Deployment Orchestration Sequence
+    setTimeout(() => {
+      addAgentLog(`Orchestrating ${setup.deploymentTarget} target...`, 'thinking');
+    }, 500);
+
+    setTimeout(() => {
+      if (setup.deploymentTarget.startsWith('k8s')) {
+        addAgentLog(`Injecting sidecars into Kubernetes cluster...`, 'info');
+      } else if (setup.deploymentTarget.startsWith('docker')) {
+        addAgentLog(`Pulling spatial runtime image from registry...`, 'info');
+      }
+    }, 1500);
+
+    setTimeout(() => {
+        addAgentLog(`Environment spin-up finalized. Orchestration complete.`, 'success');
+    }, 3000);
+
     // Apply changes based on setup
-    // Initialize based on Hybrid Synthesis
     if (setup.engineVersion === 'hybrid-custom') {
       addAgentLog(`Synthesizing custom hybrid kernel with ${setup.hybridModules.length} modules`, 'thinking');
       setTargetUrl(setup.sources.engine || "https://hybrid-kernel.local");
@@ -328,13 +351,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setTargetUrl(setup.sources.engine || "https://spatial-engine.default");
     }
 
-    // Since user doesn't want scenes/assets, we initialize a clean data plane
+    // Initialize clean data plane
     setEntities([]);
   };
 
   return (
     <WorkspaceContext.Provider value={{
       files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId, pods, isSetupComplete, setupConfig,
+      hybridSplit, synthesisStatus, setHybridSplit, setSynthesisStatus,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
       setViewMode, setSidebarOpen, setAgentSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
       setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, completeSetup
