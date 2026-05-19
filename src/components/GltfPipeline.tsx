@@ -17,6 +17,9 @@ import { cn } from '../lib/utils';
 export default function GltfPipeline() {
   const { pipelineItems, addAgentLog, addPipelineItem } = useWorkspace();
 
+  const queueStatus = pipelineItems.some(i => i.status === 'raw') ? "Processing" : "Idle";
+  const processedCount = pipelineItems.filter(i => i.status === 'processed').length;
+
   const simulateUpload = () => {
     const names = ["Hero_Avatar.glb", "SciFi_Environment.glb", "Cyber_Katana.gltf", "Neon_Storefront.glb"];
     const name = names[Math.floor(Math.random() * names.length)];
@@ -75,9 +78,9 @@ export default function GltfPipeline() {
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="grid grid-cols-3 gap-6">
-            <PipelineStat label="Total Processed" value="2.4 GB" icon={<Box className="w-4 h-4 text-ui-accent" />} />
-            <PipelineStat label="Avg Compression" value="74%" icon={<Zap className="w-4 h-4 text-emerald-400" />} />
-            <PipelineStat label="Queue Status" value="Idle" icon={<Settings className="w-4 h-4 text-purple-400" />} />
+            <PipelineStat label="Total Processed" value={processedCount > 0 ? `${(processedCount * 420.5).toFixed(1)} MB` : '0.0 MB'} icon={<Box className="w-4 h-4 text-ui-accent" />} />
+            <PipelineStat label="Avg Compression" value={processedCount > 0 ? "78.4%" : "0%"} icon={<Zap className="w-4 h-4 text-emerald-400" />} />
+            <PipelineStat label="Queue Status" value={queueStatus} icon={<Settings className="w-4 h-4 text-purple-400" />} />
           </div>
 
           <div className="space-y-4">

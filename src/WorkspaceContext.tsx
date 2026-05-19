@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene } from './types';
+import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene, Pod, WorkspaceSetup } from './types';
 import { io, Socket } from 'socket.io-client';
 
 const DEFAULT_CONFIG: WorkspaceConfig = {
@@ -38,8 +38,14 @@ interface WorkspaceContextType {
   prefabs: Prefab[];
   scenes: Scene[];
   currentSceneId: string | null;
+  pods: Pod[];
+  isSetupComplete: boolean;
+  setupConfig: WorkspaceSetup | null;
   
   setFiles: (files: FileNode[]) => void;
+  completeSetup: (setup: WorkspaceSetup) => void;
+  refreshPods: () => void;
+  rebootPod: (id: string) => void;
   openFile: (path: string) => Promise<void>;
   closeTab: (path: string) => void;
   setActiveTabPath: (path: string) => void;
@@ -99,6 +105,54 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     ], timestamp: Date.now() }
   ]);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>('s1');
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
+  const [pods, setPods] = useState<Pod[]>([
+    { id: 'p1', name: 'api-server-7fb9-d8s', status: 'Running', cpu: 12, memory: 256, restarts: 0, age: '4d 2h', node: 'node-01', namespace: 'default' },
+    { id: 'p2', name: 'spatial-engine-v3-9kx', status: 'Running', cpu: 45, memory: 1024, restarts: 1, age: '2d 4h', node: 'node-02', namespace: 'default' },
+    { id: 'p3', name: 'worker-primary-f2s', status: 'Running', cpu: 8, memory: 512, restarts: 0, age: '12d', node: 'node-01', namespace: 'infra' },
+    { id: 'p4', name: 'vector-db-0', status: 'Running', cpu: 5, memory: 2048, restarts: 0, age: '30d', node: 'node-03', namespace: 'data' },
+    { id: 'p5', name: 'redis-cache-main', status: 'Pending', cpu: 0, memory: 0, restarts: 0, age: '12s', node: 'node-02', namespace: 'infra' },
+  ]);
+
+  // Simulate Telemetry
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPods(prev => prev.map(p => {
+        if (p.status !== 'Running') return p;
+        // Jitter CPU and Memory slightly
+        const cpuJitter = (Math.random() - 0.5) * 5;
+        const memJitter = (Math.random() - 0.5) * 10;
+        return {
+          ...p,
+          cpu: Math.max(1, Math.min(99, Math.round(p.cpu + cpuJitter))),
+          memory: Math.max(100, Math.min(4096, Math.round(p.memory + memJitter)))
+        };
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshPods = () => {
+    addAgentLog('Refreshing Kubernetes pod state...', 'info');
+    // Simulate a brief pending state for the one that is pending
+    setPods(prev => prev.map(p => p.status === 'Pending' ? { ...p, status: 'Running', cpu: 5, memory: 128 } : p));
+  };
+
+  const rebootPod = (id: string) => {
+    setPods(prev => prev.map(p => {
+      if (p.id === id) {
+        addAgentLog(`Rebooting pod: ${p.name}`, 'warning');
+        return { ...p, status: 'Pending', cpu: 0, restarts: p.restarts + 1 };
+      }
+      return p;
+    }));
+    
+    setTimeout(() => {
+      setPods(prev => prev.map(p => p.id === id ? { ...p, status: 'Running', cpu: 10, memory: 256 } : p));
+      addAgentLog(`Pod successfully restarted`, 'success');
+    }, 3000);
+  };
 
   const addAgentLog = (message: string, type: AgentLog['type'] = 'info') => {
     setAgentLogs(prev => [{ id: Math.random().toString(), message, type, timestamp: Date.now() }, ...prev]);
@@ -133,7 +187,41 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendTerminalCommand = (cmd: string) => {
-    setTerminalLogs(prev => [...prev, `> ${cmd}`, `Executed: ${cmd}`]);
+    const rawCmd = cmd.trim().toLowerCase();
+    setTerminalLogs(prev => [...prev, `> ${cmd}`]);
+
+    if (rawCmd === 'help') {
+      setTerminalLogs(prev => [...prev, 
+        'AVAILABLE COMMANDS:',
+        '  help      - Display this help menu',
+        '  cls       - Clear terminal history',
+        '  pods      - List all kubernetes pods',
+        '  ls        - List workspace files',
+        '  whoami    - Display current user context',
+        '  reboot    - Usage: reboot [id] (reboots a specific pod)'
+      ]);
+    } else if (rawCmd === 'cls' || rawCmd === 'clear') {
+      setTerminalLogs(["Terminal session cleared."]);
+    } else if (rawCmd === 'pods') {
+      setTerminalLogs(prev => [...prev, 
+        'CURRENT KUBERNETES PODS:',
+        ...pods.map(p => `  ${p.name.padEnd(25)} [${p.status.padEnd(10)}] NS:${p.namespace}`)
+      ]);
+    } else if (rawCmd === 'whoami') {
+      setTerminalLogs(prev => [...prev, 'User: Spatial_Architect_01', 'Context: cluster_admin_group']);
+    } else if (rawCmd === 'ls') {
+      setTerminalLogs(prev => [...prev, 'BUILD_MANIFEST.json', 'spatials.db', 'engine_v3.bin', 'source/']);
+    } else if (rawCmd.startsWith('reboot ')) {
+      const id = rawCmd.split(' ')[1];
+      const pod = pods.find(p => p.id === id || p.name === id);
+      if (pod) {
+        rebootPod(pod.id);
+      } else {
+        setTerminalLogs(prev => [...prev, `Error: Pod '${id}' not found.`]);
+      }
+    } else {
+      setTerminalLogs(prev => [...prev, `Command not found: ${cmd}. Type 'help' for options.`]);
+    }
   };
 
   const updateConfig = (updates: Partial<WorkspaceConfig>) => {
@@ -192,12 +280,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     addAgentLog(`Created new scene: ${name}`, 'success');
   };
 
+  const completeSetup = (setup: WorkspaceSetup) => {
+    setSetupConfig(setup);
+    setIsSetupComplete(true);
+    addAgentLog(`Workspace initialized with ${setup.engineVersion} and ${setup.editorMode} mode`, 'success');
+    
+    // Apply changes based on setup
+    if (setup.engineVersion === 'v4-beta') {
+      setTargetUrl("https://spatial-engine-v4.beta");
+    }
+  };
+
   return (
     <WorkspaceContext.Provider value={{
-      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId,
+      files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId, pods, isSetupComplete, setupConfig,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
       setViewMode, setSidebarOpen, setAgentSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
-      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene
+      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, completeSetup
     }}>
       {children}
     </WorkspaceContext.Provider>

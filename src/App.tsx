@@ -1,11 +1,18 @@
 import React from 'react';
-import { WorkspaceProvider } from './WorkspaceContext';
+import { WorkspaceProvider, useWorkspace } from './WorkspaceContext';
 import Shell from './components/Shell';
+import SetupGate from './components/SetupGate';
+
+function WorkspaceLayout() {
+  const { isSetupComplete } = useWorkspace();
+
+  return isSetupComplete ? <Shell /> : <SetupGate />;
+}
 
 function App() {
   return (
     <WorkspaceProvider>
-      <Shell />
+      <WorkspaceLayout />
     </WorkspaceProvider>
   );
 }

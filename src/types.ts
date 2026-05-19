@@ -1,4 +1,16 @@
-export type ViewMode = 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings';
+export type ViewMode = 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings' | 'infrastructure' | 'assistant';
+
+export interface Pod {
+  id: string;
+  name: string;
+  status: 'Running' | 'Pending' | 'Succeeded' | 'Failed' | 'Unknown';
+  cpu: number;
+  memory: number;
+  restarts: number;
+  age: string;
+  node: string;
+  namespace: string;
+}
 
 export interface FileNode {
   name: string;
@@ -73,4 +85,11 @@ export interface Scene {
   name: string;
   entities: WorldEntity[];
   timestamp: number;
+}
+
+export interface WorkspaceSetup {
+  engineVersion: 'v3-stable' | 'v4-beta' | 'v2-legacy';
+  editorMode: 'full' | 'code-lite' | 'spatial-only';
+  customConfig?: string;
+  advancedTelemetry: boolean;
 }

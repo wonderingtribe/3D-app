@@ -66,6 +66,52 @@ async function startServer() {
       res.status(500).json({ error: error.message });
     }
   });
+  // General Assistant Endpoint
+  app.post('/api/assistant/chat', async (req, res) => {
+    try {
+      const { message, history, context } = req.body;
+      
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      });
+
+      const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+      const systemPrompt = `You are the Spatial OS Intelligence Assistant.
+      You have access to the current workspace state:
+      - Pods: ${JSON.stringify(context.pods)}
+      - Scenes: ${JSON.stringify(context.scenes)}
+      - View Mode: ${context.viewMode}
+      
+      You can answer questions about the infrastructure or scenes.
+      If the user wants to perform an action (like rebooting a pod or creating a scene), suggest the specific command.
+      Be concise, technical, and helpful. Use markdown for formatting.`;
+
+      const chat = model.startChat({
+        history: history.map((m: any) => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        })),
+        generationConfig: {
+          maxOutputTokens: 500,
+        },
+      });
+
+      const result = await chat.sendMessage([
+        { text: systemPrompt },
+        { text: message }
+      ]);
+      const responseText = result.response.text();
+
+      res.json({ content: responseText });
+    } catch (error: any) {
+      console.error('Assistant Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const io = new Server(httpServer, {
     cors: {
       origin: "*",

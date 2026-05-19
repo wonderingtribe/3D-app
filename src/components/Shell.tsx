@@ -10,7 +10,9 @@ import EngineEditor from './EngineEditor';
 import GltfPipeline from './GltfPipeline';
 import ProjectSettings from './ProjectSettings';
 import AgentSidebar from './AgentSidebar';
-import { ChevronDown, BrainCircuit } from 'lucide-react';
+import KubernetesView from './KubernetesView';
+import AIAssistant from './AIAssistant';
+import { ChevronDown, BrainCircuit, Box, Sparkles } from 'lucide-react';
 
 const COLORS = {
   bg: "#0a0b0e",
@@ -31,6 +33,8 @@ const COLORS = {
 };
 
 const NAV_TABS = [
+  { id: "assistant", label: "AI Intelligence" },
+  { id: "infrastructure", label: "Clusters & Pods" },
   { id: "design", label: "UI Design" },
   { id: "engine", label: "Engine Setup" },
   { id: "spatial", label: "Spatial View" },
@@ -40,8 +44,19 @@ const NAV_TABS = [
 ];
 
 export default function Shell() {
-  const { viewMode, setViewMode, isSidebarOpen, setSidebarOpen, isAgentSidebarOpen, setAgentSidebarOpen, isAgentThinking, addAgentLog } = useWorkspace();
+  const { viewMode, setViewMode, isSidebarOpen, setSidebarOpen, isAgentSidebarOpen, setAgentSidebarOpen, isAgentThinking, addAgentLog, setupConfig } = useWorkspace();
   const [deployOpen, setDeployOpen] = useState(false);
+
+  const filteredTabs = NAV_TABS.filter(tab => {
+    if (!setupConfig) return true;
+    if (setupConfig.editorMode === 'code-lite') {
+      return !['design', 'pipeline'].includes(tab.id);
+    }
+    if (setupConfig.editorMode === 'spatial-only') {
+      return !['code', 'engine'].includes(tab.id);
+    }
+    return true;
+  });
 
   return (
     <div style={{
@@ -66,13 +81,13 @@ export default function Shell() {
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>Spatial OS</div>
-            <div style={{ fontSize: 10, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Workspace Beta</div>
+            <div style={{ fontSize: 10, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>{setupConfig?.engineVersion || 'Workspace Beta'}</div>
           </div>
         </div>
 
         {/* Nav Tabs */}
         <div style={{ display: "flex", gap: 2, flex: 1, overflow: "auto" }}>
-          {NAV_TABS.map(tab => (
+          {filteredTabs.map(tab => (
             <button key={tab.id} onClick={() => setViewMode(tab.id as any)} style={{
               background: viewMode === tab.id ? COLORS.accentGlow : "transparent",
               border: viewMode === tab.id ? `1px solid ${COLORS.accent}44` : "1px solid transparent",
@@ -185,6 +200,8 @@ export default function Shell() {
           display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", gap: 8, flexShrink: 0,
         }}>
           <ActivityButton id="explorer" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>} active={isSidebarOpen} onClick={() => setSidebarOpen(!isSidebarOpen)} />
+          <ActivityButton id="infra" icon={<Box size={20} />} active={viewMode === 'infrastructure'} onClick={() => setViewMode('infrastructure')} />
+          <ActivityButton id="ai" icon={<Sparkles size={20} />} active={viewMode === 'assistant'} onClick={() => setViewMode('assistant')} />
         </div>
 
         {/* FILE EXPLORER PANEL */}
@@ -210,6 +227,8 @@ export default function Shell() {
                </div>
              )}
              {viewMode === 'pipeline' && <GltfPipeline />}
+             {viewMode === 'infrastructure' && <KubernetesView />}
+             {viewMode === 'assistant' && <AIAssistant />}
            </main>
 
            <Terminal />

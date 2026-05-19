@@ -17,34 +17,37 @@ interface AIArchitectProps {
 
 export default function AIArchitect({ onClose }: { onClose: () => void }) {
   const [promptValue, setPromptValue] = useState("");
-  const { setEntities, addAgentLog } = useWorkspace();
+  const { setEntities, addAgentLog, entities } = useWorkspace();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!promptValue.trim()) return;
     
     addAgentLog(`AI Architect processing: "${promptValue}"`, 'thinking');
     
-    // Simulate generation of a simple structural layout
-    setTimeout(() => {
-      const generatedEntities = [
-        { id: 'gen-1', type: 'mesh', name: 'AI_Pillar_A', x: -5, y: 5, z: 0, scale: 1, rotation: 0, properties: { color: '#ffffff' } },
-        { id: 'gen-2', type: 'mesh', name: 'AI_Pillar_B', x: 5, y: 5, z: 0, scale: 1, rotation: 0, properties: { color: '#ffffff' } },
-        { id: 'gen-3', type: 'mesh', name: 'AI_Platform', x: 0, y: 10, z: 0, scale: 1, rotation: 0, properties: { color: '#06b6d4' } },
-        { id: 'gen-4', type: 'light', name: 'AI_Core_Light', x: 0, y: 8, z: 0, scale: 1, rotation: 0, properties: { intensity: 2, color: '#00ffff' } },
-      ].map((ent: any) => ({
-          ...ent,
-          x: ent.x * 20 + 200,
-          y: ent.z * 20 + 200,
-          z: ent.y,
-          scale: 1,
-          rotation: 0,
-          properties: { color: ent.color }
-        }));
+    try {
+      const response = await fetch('/api/architect/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptValue, currentEntities: entities })
+      });
+      
+      if (!response.ok) throw new Error('API_REJECTION: ARCHITECT_CONTEXT_ERROR');
+      
+      const generatedEntities = await response.json();
+      
+      // Transform coordinates for spatial view if needed (assuming engine coordinates are different)
+      const transformedEntities = generatedEntities.map((ent: any) => ({
+        ...ent,
+        id: ent.id || `gen-${Math.random().toString(36).substr(2, 5)}`
+      }));
         
-      setEntities(generatedEntities as any);
-      addAgentLog(`AI generated new architectural layout`, 'success');
+      setEntities([...entities, ...transformedEntities]);
+      addAgentLog(`AI successfully synthesized ${transformedEntities.length} new components`, 'success');
       onClose();
-    }, 1500);
+    } catch (error) {
+      console.error('Generation Error:', error);
+      addAgentLog(`Architectural synthesis failed: ${error}`, 'error');
+    }
   };
 
   const applyQuickOption = (text: string) => {

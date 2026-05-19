@@ -14,12 +14,12 @@ import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 
 export default function EngineEditor() {
-  const { config, updateConfig, addAgentLog } = useWorkspace();
+  const { config, updateConfig, addAgentLog, setupConfig } = useWorkspace();
   const [isCompiling, setIsCompiling] = useState(false);
 
   const simulateCompile = () => {
     setIsCompiling(true);
-    addAgentLog(`Compiling engine source for target: ${config.engine}`, 'info');
+    addAgentLog(`Compiling engine source for target: ${config.engine} (${setupConfig?.engineVersion || 'Stable'})`, 'info');
     setTimeout(() => {
       setIsCompiling(false);
       addAgentLog(`Engine build successful. Native extensions initialized.`, 'success');
