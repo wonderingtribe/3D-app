@@ -1,6 +1,6 @@
 {
-  "name": "spatial-workspace",
-  "description": "A dark, spectral spatial workspace for AI-powered scene construction, engine orchestration, and nano 9.0 deployment.",
+  "name": "Spatial 3D IDE",
+  "description": "A high-fidelity spatial development environment for AI-powered scene construction, engine orchestration, and local-first 3D coding workflow.",
   "requestFramePermissions": [
     "camera",
     "microphone"

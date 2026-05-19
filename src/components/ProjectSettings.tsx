@@ -191,6 +191,31 @@ export default function ProjectSettings() {
            </div>
         </div>
       </div>
+
+      <div className="space-y-6 pt-4 pb-32">
+        <SectionHeader title="Danger Zone" icon={<Shield className="w-4 h-4 text-ui-red" />} />
+        <div className="bg-ui-red/5 border border-ui-red/20 rounded-2xl p-6 space-y-4">
+           <div className="flex items-start justify-between gap-4">
+              <div>
+                 <div className="text-[11px] font-bold text-ui-red">Reset Workspace</div>
+                 <div className="text-[9px] text-ui-text-muted italic mt-1 leading-relaxed">
+                   Permanently wipe all locally stored entities, scenes, and configurations. This will return you to the initial setup gate.
+                 </div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (confirm("Are you sure you want to PERMANENTLY WIPE your local spatial workspace? This cannot be undone.")) {
+                    localStorage.clear();
+                    window.location.reload();
+                  }
+                }}
+                className="px-4 py-2 bg-ui-red text-white shrink-0 rounded-lg text-[10px] font-bold shadow-lg shadow-ui-red/20 hover:scale-105 transition-all"
+              >
+                 RESET WORKSPACE
+              </button>
+           </div>
+        </div>
+      </div>
      </div>
     </div>
   );

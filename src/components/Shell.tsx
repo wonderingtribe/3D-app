@@ -77,11 +77,11 @@ export default function Shell() {
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             boxShadow: `0 0 12px ${COLORS.accentGlow}`
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <Box size={16} color="white" />
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>Spatial OS</div>
-            <div style={{ fontSize: 10, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>{setupConfig?.engineVersion || 'Workspace Beta'}</div>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.2, textTransform: "uppercase" }}>Spatial Hybrid IDE</div>
+            <div style={{ fontSize: 9, color: COLORS.textFaint, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>Kernel: {setupConfig?.engineVersion || 'V3 STABLE'}</div>
           </div>
         </div>
 

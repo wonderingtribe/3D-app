@@ -88,8 +88,14 @@ export interface Scene {
 }
 
 export interface WorkspaceSetup {
-  engineVersion: 'v3-stable' | 'v4-beta' | 'v2-legacy';
+  engineVersion: 'v3-stable' | 'v4-beta' | 'v2-legacy' | 'hybrid-custom';
   editorMode: 'full' | 'code-lite' | 'spatial-only';
+  hybridModules: string[];
+  sources: {
+    engine?: string;
+    assets?: string;
+    telemetry?: string;
+  };
   customConfig?: string;
   advancedTelemetry: boolean;
 }

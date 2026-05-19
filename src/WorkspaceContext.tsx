@@ -107,6 +107,40 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [currentSceneId, setCurrentSceneId] = useState<string | null>('s1');
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
+
+  // Persistence Logic
+  useEffect(() => {
+    const savedSetup = localStorage.getItem('spatial_setup');
+    const savedEntities = localStorage.getItem('spatial_entities');
+    const savedScenes = localStorage.getItem('spatial_scenes');
+
+    if (savedSetup) {
+      const parsedSetup = JSON.parse(savedSetup);
+      setSetupConfig(parsedSetup);
+      setIsSetupComplete(true);
+    }
+    if (savedEntities) {
+      setEntities(JSON.parse(savedEntities));
+    }
+    if (savedScenes) {
+      setScenes(JSON.parse(savedScenes));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSetupComplete && setupConfig) {
+      localStorage.setItem('spatial_setup', JSON.stringify(setupConfig));
+    }
+  }, [isSetupComplete, setupConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('spatial_entities', JSON.stringify(entities));
+  }, [entities]);
+
+  useEffect(() => {
+    localStorage.setItem('spatial_scenes', JSON.stringify(scenes));
+  }, [scenes]);
+
   const [pods, setPods] = useState<Pod[]>([
     { id: 'p1', name: 'api-server-7fb9-d8s', status: 'Running', cpu: 12, memory: 256, restarts: 0, age: '4d 2h', node: 'node-01', namespace: 'default' },
     { id: 'p2', name: 'spatial-engine-v3-9kx', status: 'Running', cpu: 45, memory: 1024, restarts: 1, age: '2d 4h', node: 'node-02', namespace: 'default' },
@@ -286,9 +320,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     addAgentLog(`Workspace initialized with ${setup.engineVersion} and ${setup.editorMode} mode`, 'success');
     
     // Apply changes based on setup
-    if (setup.engineVersion === 'v4-beta') {
-      setTargetUrl("https://spatial-engine-v4.beta");
+    // Initialize based on Hybrid Synthesis
+    if (setup.engineVersion === 'hybrid-custom') {
+      addAgentLog(`Synthesizing custom hybrid kernel with ${setup.hybridModules.length} modules`, 'thinking');
+      setTargetUrl(setup.sources.engine || "https://hybrid-kernel.local");
+    } else {
+      setTargetUrl(setup.sources.engine || "https://spatial-engine.default");
     }
+
+    // Since user doesn't want scenes/assets, we initialize a clean data plane
+    setEntities([]);
   };
 
   return (
