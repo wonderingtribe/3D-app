@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Workflow, 
@@ -9,13 +9,16 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  RefreshCw
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 
 export default function GltfPipeline() {
   const { pipelineItems, addAgentLog, addPipelineItem } = useWorkspace();
+  const [importUrlOpen, setImportUrlOpen] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
 
   const queueStatus = pipelineItems.some(i => i.status === 'raw') ? "Processing" : "Idle";
   const processedCount = pipelineItems.filter(i => i.status === 'processed').length;
@@ -50,16 +53,10 @@ export default function GltfPipeline() {
           <div className="flex gap-3">
              <button 
               onClick={() => {
-                const url = prompt("Enter GLTF/GLB URL:");
-                if (url) {
-                  addPipelineItem({
-                    name: url.split('/').pop() || 'external_model.glb',
-                    type: 'gltf'
-                  });
-                  addAgentLog(`Importing external asset from: ${url}`, 'info');
-                }
+                setImportUrl('');
+                setImportUrlOpen(true);
               }}
-              className="p-1 px-2 border border-ui-border hover:bg-ui-panel rounded text-[9px] font-bold text-ui-text-muted flex items-center gap-1 transition-all"
+              className="p-1 px-2 border border-[#1b1f26] hover:bg-[#12161c] rounded text-[9px] font-bold text-ui-text-muted flex items-center gap-1 transition-all"
             >
               <Globe className="w-3 h-3" />
               EXTERNAL
@@ -163,6 +160,66 @@ export default function GltfPipeline() {
           </div>
         </div>
       </div>
+
+      {/* GLTF Custom URL Overlay Modal */}
+      {importUrlOpen && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0c0d12] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-wider mb-2">Import GLTF / GLB Asset</h3>
+            <p className="text-[10px] text-zinc-500 uppercase font-mono mb-4">Provide valid absolute model URL</p>
+
+            <div className="space-y-4">
+              <input 
+                type="text"
+                placeholder="https://assets.gltf/model.glb"
+                className="w-full bg-[#111318] border border-white/5 rounded-xl p-2.5 text-xs text-zinc-200 outline-none focus:border-ui-accent"
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (importUrl.trim()) {
+                      const urlVal = importUrl.trim();
+                      addPipelineItem({
+                        name: urlVal.split('/').pop() || 'external_model.glb',
+                        type: 'gltf'
+                      });
+                      addAgentLog(`Importing external asset from: ${urlVal}`, 'info');
+                    }
+                    setImportUrlOpen(false);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button 
+                type="button"
+                onClick={() => setImportUrlOpen(false)}
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-zinc-400 bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  if (importUrl.trim()) {
+                    const urlVal = importUrl.trim();
+                    addPipelineItem({
+                      name: urlVal.split('/').pop() || 'external_model.glb',
+                      type: 'gltf'
+                    });
+                    addAgentLog(`Importing external asset from: ${urlVal}`, 'info');
+                  }
+                  setImportUrlOpen(false);
+                }}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-colors"
+              >
+                Fetch GLTF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -180,5 +237,3 @@ function PipelineStat({ label, value, icon }: { label: string; value: string; ic
     </div>
   );
 }
-
-import { RefreshCw } from 'lucide-react';

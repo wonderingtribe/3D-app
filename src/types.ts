@@ -1,4 +1,4 @@
-export type ViewMode = 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings' | 'infrastructure' | 'assistant';
+export type ViewMode = 'pod-studio' | 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings' | 'infrastructure' | 'assistant' | 'plugins';
 
 export interface Pod {
   id: string;

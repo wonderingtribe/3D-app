@@ -18,10 +18,30 @@ import { cn } from '../lib/utils';
 import { Pod } from '../types';
 
 export default function KubernetesView() {
-  const { pods, refreshPods, rebootPod } = useWorkspace();
+  const { pods, refreshPods, rebootPod, activeEngineId, spinUpEnginePod } = useWorkspace();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNamespace, setActiveNamespace] = useState<string>("All");
   const [activeStatus, setActiveStatus] = useState<string>("All");
+
+  const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const [provisionProgress, setProvisionProgress] = useState(0);
+
+  const handleProvisionEngine = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => {
+    setProvisioningId(engineId);
+    setProvisionProgress(0);
+    spinUpEnginePod(engineId);
+
+    const interval = setInterval(() => {
+      setProvisionProgress(p => {
+        if (p >= 100) {
+          clearInterval(interval);
+          setProvisioningId(null);
+          return 100;
+        }
+        return p + 20;
+      });
+    }, 400);
+  };
 
   const namespaces = useMemo(() => ["All", ...new Set(pods.map(p => p.namespace))], [pods]);
   const statuses = ["All", "Running", "Pending", "Failed"];
@@ -90,6 +110,185 @@ export default function KubernetesView() {
           <StatCard icon={<Database className="w-4 h-4" />} label="MEMORY_LOAD" value={`${stats.mem} GB`} trend="-0.5%" color="text-purple-400" />
           <StatCard icon={<Network className="w-4 h-4" />} label="NETWORK_IO" value={`${stats.net} GB/s`} trend="+124MB" color="text-emerald-400" />
           <StatCard icon={<HardDrive className="w-4 h-4" />} label="DISK_OPS" value={`${stats.storage} IOPS`} trend="STABLE" color="text-orange-400" />
+        </div>
+
+        {/* Engine Provisioning Registry */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+            <Network className="w-3.5 h-3.5 text-blue-400" />
+            ENGINE_PROVISIONING_REGISTRY (K8S/WASM COMPILER BLUEPRINTS)
+          </h3>
+          <div className="grid grid-cols-4 gap-4">
+            
+            {/* Unreal Card */}
+            <div className={cn(
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
+              activeEngineId === 'unreal' ? 'border-[#00b8ff] shadow-[0_0_15px_rgba(0,184,255,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+            )}>
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-[#f5c842] uppercase tracking-widest bg-[#f5c842]/10 border border-[#f5c842]/15 px-2 py-0.5 rounded">HEAVY_GPU</span>
+                  <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3000</span>
+                </div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">Unreal Engine 5</h4>
+                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                  Raytracing Core, Pixel Streaming container pod with multi-threaded shaders.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                {provisioningId === 'unreal' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
+                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>{provisionProgress}%</span>
+                    </div>
+                    <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${provisionProgress}%` }} />
+                    </div>
+                  </div>
+                ) : activeEngineId === 'unreal' ? (
+                  <div className="w-full text-center py-2 bg-[#00b8ff]/10 text-[#00b8ff] rounded-lg text-[9px] font-extrabold uppercase border border-[#00b8ff]/20">
+                    🟢 CORE_POD_ACTIVE
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleProvisionEngine('unreal')}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#00b8ff] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
+                  >
+                    SPIN UP CONTAINER
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* PlayCanvas Card */}
+            <div className={cn(
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
+              activeEngineId === 'playcanvas' ? 'border-[#00e5a0] shadow-[0_0_15px_rgba(0,229,160,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+            )}>
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-[#00e5a0] uppercase tracking-widest bg-[#00e5a0]/10 border border-[#00e5a0]/15 px-2 py-0.5 rounded">WEB_STANDARD</span>
+                  <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3001</span>
+                </div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">PlayCanvas Studio</h4>
+                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                  Full-fidelity Node builder, lightweight web-based developer sandbox.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                {provisioningId === 'playcanvas' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
+                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>{provisionProgress}%</span>
+                    </div>
+                    <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${provisionProgress}%` }} />
+                    </div>
+                  </div>
+                ) : activeEngineId === 'playcanvas' ? (
+                  <div className="w-full text-center py-2 bg-[#00e5a0]/10 text-[#00e5a0] rounded-lg text-[9px] font-extrabold uppercase border border-[#00e5a0]/20">
+                    🟢 STUDIO_POD_ACTIVE
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleProvisionEngine('playcanvas')}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#00e5a0] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
+                  >
+                    SPIN UP CONTAINER
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Unity Card */}
+            <div className={cn(
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
+              activeEngineId === 'unity' ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+            )}>
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-[#a78bfa] uppercase tracking-widest bg-[#a78bfa]/10 border border-[#a78bfa]/15 px-2 py-0.5 rounded">WASM_COMPILER</span>
+                  <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3002</span>
+                </div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">Unity Reflect</h4>
+                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                  Real-time C# WASM dynamic linking proxy, memory layout inspectors.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                {provisioningId === 'unity' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
+                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>{provisionProgress}%</span>
+                    </div>
+                    <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500 transition-all duration-300" style={{ width: `${provisionProgress}%` }} />
+                    </div>
+                  </div>
+                ) : activeEngineId === 'unity' ? (
+                  <div className="w-full text-center py-2 bg-[#a78bfa]/10 text-[#a78bfa] rounded-lg text-[9px] font-extrabold uppercase border border-[#a78bfa]/20">
+                    🟢 REFLECT_POD_ACTIVE
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleProvisionEngine('unity')}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#a78bfa] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
+                  >
+                    SPIN UP CONTAINER
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* General WebGL Card */}
+            <div className={cn(
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
+              activeEngineId === 'three' ? 'border-zinc-500 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'border-white/5 hover:border-white/10'
+            )}>
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest bg-[#64748b]/10 border border-[#64748b]/15 px-2 py-0.5 rounded">LIGHT_EDGE</span>
+                  <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 5173</span>
+                </div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">Core WebGL Sandbox</h4>
+                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                  Raw WebGPU/Three.js context with vertex asset loader pipeline logs.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                {provisioningId === 'three' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
+                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>{provisionProgress}%</span>
+                    </div>
+                    <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                      <div className="h-full bg-gray-500 transition-all duration-300" style={{ width: `${provisionProgress}%` }} />
+                    </div>
+                  </div>
+                ) : activeEngineId === 'three' ? (
+                  <div className="w-full text-center py-2 bg-white/10 text-white rounded-lg text-[9px] font-extrabold uppercase border border-white/20">
+                    🟢 CORE_POD_ACTIVE
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleProvisionEngine('three')}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-white border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
+                  >
+                    SPIN UP CONTAINER
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
         </div>
 
         {/* Pod List */}

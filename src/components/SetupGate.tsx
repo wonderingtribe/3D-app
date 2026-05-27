@@ -66,6 +66,20 @@ export default function SetupGate() {
     }
   };
 
+  const selectEngineWithAutoAdvance = (val: WorkspaceSetup['engineVersion']) => {
+    setEngine(val);
+    setTimeout(() => {
+      setCurrentStep('connectivity');
+    }, 280);
+  };
+
+  const selectTopologyWithAutoAdvance = (val: DeploymentTarget) => {
+    setDeployment(val);
+    setTimeout(() => {
+      setCurrentStep('synthesis');
+    }, 280);
+  };
+
   const handleAiSuggest = async () => {
     setIsAiSuggesting(true);
     try {
@@ -106,50 +120,49 @@ export default function SetupGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0d0f12] flex flex-col font-sans selection:bg-[#00b8ff]/30 selection:text-[#00b8ff] text-[#e2e8f0]">
+    <div className="fixed inset-0 z-[100] bg-[#08090d] flex flex-col font-sans selection:bg-[#00b8ff]/30 selection:text-[#00b8ff] text-[#cbd5e1]">
       {/* GLOBAL HUD STYLES */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         @keyframes pulse-soft {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
+          0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px rgba(0, 229, 160, 0.4)); }
+          50% { opacity: 0.5; filter: drop-shadow(0 0 1px rgba(0, 229, 160, 0.1)); }
         }
         .animate-pulse-soft { animation: pulse-soft 2s infinite; }
       `}} />
 
       {/* TOP NAV */}
-      <nav className="h-[52px] bg-[#13161b]/80 backdrop-blur-md border-b border-[#1f242d] px-6 flex items-center justify-between shrink-0 sticky top-0 z-[100]">
+      <nav className="h-[48px] bg-[#0e1115]/90 backdrop-blur-md border-b border-[#1b1f26] px-6 flex items-center justify-between shrink-0 sticky top-0 z-[100]">
         <div className="flex items-center gap-5">
-           <a href="#" className="flex items-center gap-2 font-mono text-[13px] font-semibold text-[#e2e8f0] no-underline">
-              <div className="w-[26px] h-[26px] bg-gradient-to-br from-[#00b8ff] via-[#0077ff] to-[#a78bfa] rounded-md flex items-center justify-center text-[11px] text-white font-bold shadow-[0_0_15px_rgba(0,184,255,0.3)]">S</div>
-              Spatial_IDE <span className="text-[#8b95a8] font-normal">/ workspace</span>
+           <a href="#" className="flex items-center gap-2 font-mono text-[12px] font-bold text-[#f8fafc] no-underline tracking-wide">
+              <div className="w-[22px] h-[22px] bg-gradient-to-br from-[#00b8ff] to-[#a78bfa] rounded flex items-center justify-center text-[10px] text-black font-black shadow-[0_0_12px_rgba(0,184,255,0.25)]">S</div>
+              Spatial_IDE <span className="text-[#64748b] font-normal">/ setup</span>
            </a>
-           <div className="nav-divider-v" />
-           <span className="font-mono text-[11px] text-[#00b8ff] bg-[#00b8ff]/10 border border-[#00b8ff]/20 px-2.5 py-0.5 rounded-md shadow-[0_0_10px_rgba(0,184,255,0.1)]">Kernel v9.0.Hybrid</span>
+           <div className="w-px h-4 bg-[#1b1f26]" />
+           <span className="font-mono text-[10px] text-[#00b8ff] bg-[#00b8ff]/10 border border-[#00b8ff]/15 px-2 py-0.5 rounded-md tracking-wider">v9.0.Hybrid</span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
            <button className="nav-btn-user hover:bg-white/5 transition-colors">Docs</button>
            <button className="nav-btn-user hover:bg-white/5 transition-colors">Settings</button>
-           <button className="nav-btn-user text-[#00b8ff] border-[#00b8ff]/30 hover:bg-[#00b8ff]/10 transition-colors">Deploy</button>
         </div>
       </nav>
 
-      <div className="flex-1 grid grid-cols-[220px_1fr_280px] min-h-0 container-custom relative">
+      <div className="flex-1 grid grid-cols-[200px_1fr_260px] min-h-0 relative">
+        {/* Subtle Decorative Background Gradients */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-           <div className="absolute -top-[20%] -left-[10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
-           <div className="absolute top-[30%] -right-[10%] w-[35%] h-[40%] bg-purple-500/5 blur-[100px] rounded-full" />
-           <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[35%] bg-emerald-500/5 blur-[120px] rounded-full" />
+           <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-blue-500/[0.02] blur-[100px] rounded-full" />
+           <div className="absolute bottom-[-10%] right-[5%] w-[350px] h-[350px] bg-purple-500/[0.02] blur-[100px] rounded-full" />
         </div>
         
         {/* SIDEBAR: BUILD PHASES */}
-        <aside className="bg-[#13161b] border-r border-[#1f242d] py-5 flex flex-col overflow-y-auto no-scrollbar">
-           <div className="px-4 mb-6">
-              <div className="font-mono text-[9px] font-semibold tracking-[0.12em] text-[#94a3b8] uppercase mb-2.5 px-1">Build Phases</div>
-              <div className="space-y-0.5">
+        <aside className="bg-[#0b0c10] border-r border-[#151921] py-5 flex flex-col overflow-y-auto no-scrollbar justify-between">
+           <div className="px-3">
+              <div className="font-mono text-[9px] font-bold tracking-[0.15em] text-[#64748b] uppercase mb-4 px-2">Build Phases</div>
+              <div className="space-y-1">
                  <PhaseItem num="01" name="Orchestration" status={currentIndex > 0 ? 'done' : currentIndex === 0 ? 'active' : 'pending'} onClick={() => setCurrentStep('orchestration')} />
                  <PhaseItem num="02" name="Connectivity" status={currentIndex > 1 ? 'done' : currentIndex === 1 ? 'active' : 'pending'} onClick={() => setCurrentStep('connectivity')} />
                  <PhaseItem num="03" name="Deployment" status={currentIndex > 2 ? 'done' : currentIndex === 2 ? 'active' : 'pending'} onClick={() => setCurrentStep('deployment')} />
@@ -157,416 +170,336 @@ export default function SetupGate() {
               </div>
            </div>
 
-           <div className="px-4 mt-auto mb-4">
-              <div className="font-mono text-[9px] font-semibold tracking-[0.12em] text-[#94a3b8] uppercase mb-2.5 px-1">Active Stack</div>
-              <div className="p-1 space-y-1.5">
-                 <div className="font-mono text-[11px] text-[#00e5a0] flex items-center gap-1.5 ">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00e5a0] shadow-[0_0_8px_#00e5a0]" />
-                    Hybrid Core Active
+           <div className="px-4 border-t border-[#151921] pt-5 mt-5">
+              <div className="font-mono text-[9px] font-bold tracking-[0.15em] text-[#64748b] uppercase mb-2">Active Spec</div>
+              <div className="space-y-2">
+                 <div className="font-mono text-[10px] text-[#00e5a0] flex items-center gap-1.5 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00e5a0] animate-pulse" />
+                    Core Connected
                  </div>
-                 <div className="font-mono text-[11px] text-[#94a3b8] leading-relaxed">
+                 <div className="font-mono text-[10px] text-[#64748b] leading-relaxed">
                     Runtime: WASI<br/>
                     Cluster: {deployment.toUpperCase().replace(/-/g, '_')}<br/>
-                    Workers: 3 active<br/>
-                    PID: 4821
+                    Workers: 3 Active
                  </div>
               </div>
            </div>
         </aside>
 
         {/* MAIN: CONTENT AREA */}
-        <main className="bg-[#0d0f12] overflow-y-auto no-scrollbar flex flex-col h-full px-12 py-10">
-           <div className="max-w-[900px] w-full mx-auto flex-1 space-y-12">
-              <header className="pb-8 border-b border-[#1f242d]">
-                <div className="font-mono text-[11px] text-[#94a3b8] mb-3 flex items-center gap-1.5 font-medium tracking-wide">
-                   Spatial_IDE › Kernel › <span className="text-[#cbd5e1] capitalize font-bold">Synthesis</span>
-                </div>
-                <h1 className="text-[28px] font-bold tracking-tight text-[#f8fafc] mb-3 uppercase">
-                   Kernel Synthesis
-                </h1>
-                <p className="text-[#94a3b8] text-[15px] leading-relaxed max-w-[600px] font-medium">
-                   Merge core engine components to synthesize your custom 3D development kernel. Select a primary engine base and configure integration modules.
-                </p>
-              </header>
+        <main className="bg-[#06070a] overflow-y-auto no-scrollbar flex flex-col h-full px-12 py-8">
+           <div className="max-w-[760px] w-full mx-auto flex-1 flex flex-col justify-between">
+              
+              <div className="space-y-8">
+                 {/* DYNAMIC HEADER */}
+                 <header className="pb-5 border-b border-[#151921] mb-2">
+                    <div className="font-mono text-[9px] text-[#64748b] mb-1.5 tracking-wider uppercase">
+                       Compilation Process › <span className="text-[#a78bfa] font-bold">Phase_0{currentIndex + 1}</span>
+                    </div>
+                    <h1 className="text-[20px] font-black tracking-tight text-[#f8fafc] mb-1 uppercase font-mono">
+                       {currentStep === 'orchestration' && "01 › Core_Selection"}
+                       {currentStep === 'connectivity' && "02 › Network_Routing"}
+                       {currentStep === 'deployment' && "03 › Host_Topology"}
+                       {currentStep === 'synthesis' && "04 › System_Synthesis"}
+                    </h1>
+                    <p className="text-zinc-500 text-[11px] leading-relaxed max-w-[580px] uppercase tracking-wider font-semibold">
+                       {currentStep === 'orchestration' && "Bind core engine layers and WASI compiler sub-modules."}
+                       {currentStep === 'connectivity' && "Route port states and dynamic signal conduits."}
+                       {currentStep === 'deployment' && "Select the virtual host topology for sandbox execution."}
+                       {currentStep === 'synthesis' && "Confirm structural metrics before launching spatial compilers."}
+                    </p>
+                 </header>
 
-              {/* ACTIVE HUD BAR */}
-              <div className="h-14 bg-[#13161b] border border-[#252b36] rounded-xl px-5 flex items-center gap-4 font-mono text-[11px] select-none shadow-sm">
-                 <div className="flex items-center gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-[#00e5a0] shadow-[0_0_8px_#00e5a0] animate-pulse-soft" />
-                    <span className="text-[#cbd5e1] font-bold uppercase tracking-wider">Active Hybrid Stack</span>
+                 {/* ACTIVE HUD STATE BAR */}
+                 <div className="h-11 bg-[#0b0c10]/60 border border-[#151921] rounded-lg px-4 flex items-center justify-between font-mono text-[10px] select-none text-zinc-400">
+                    <div className="flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-[#00e5a0] animate-pulse-soft" />
+                       <span className="text-zinc-200 font-bold uppercase tracking-wide">Static Active Assembly</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#64748b]">
+                       <span className="text-zinc-400">60_FPS</span>
+                       <span>·</span>
+                       <span className="text-[#00e5a0] bg-[#00e5a0]/10 border border-[#00e5a0]/20 px-1.5 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider">healthy</span>
+                    </div>
                  </div>
-                 <div className="flex-1 flex items-center gap-3">
-                    <span className="text-[#475569] h-4 w-px bg-[#252b36]" />
-                    <span className="text-[#f8fafc] font-black uppercase tracking-tight">core</span>
-                    <span className="text-[#4b5563] font-bold">·</span>
-                    <span className="text-[#94a3b8] font-bold">60_FPS</span>
-                    <span className="text-[#4b5563] font-bold">·</span>
-                    <span className="text-[#00e5a0] font-black uppercase tracking-widest text-[9px] bg-[#00e5a0]/10 px-2 py-0.5 rounded border border-[#00e5a0]/20">system_healthy</span>
-                 </div>
+
+                 {/* STEP RENDERERS */}
+                 <AnimatePresence mode="wait">
+                    <motion.div key={currentStep} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }} className="space-y-8">
+                      {currentStep === 'orchestration' && (
+                        <div className="space-y-6">
+                          {/* AI Assistant Hook */}
+                          <div className="bg-[#0e1115] border border-[#1b1f26] rounded-xl p-4 relative overflow-hidden">
+                            <div className="relative z-10 flex items-center gap-3">
+                               <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+                                  <Sparkles size={16} />
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="text-[12px] font-bold text-white uppercase tracking-wider">Suggest parameters</h3>
+                                  <p className="text-[11px] text-[#64748b]">Describe your layout target and get prompt-based configurations.</p>
+                                </div>
+                            </div>
+                            <div className="mt-3 relative flex items-center">
+                               <input 
+                                 type="text" 
+                                 placeholder="e.g. 'Optimized lightweight WebGL sandbox'"
+                                 className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg py-2 pl-3 pr-28 text-[11.5px] text-white outline-none focus:border-blue-500/30 transition-all font-medium"
+                                 value={aiPrompt}
+                                 onChange={(e) => setAiPrompt(e.target.value)}
+                                 onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
+                               />
+                               <button 
+                                 onClick={handleAiSuggest}
+                                 disabled={!aiPrompt.trim() || isAiSuggesting}
+                                 className="absolute right-1 px-3 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 rounded text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
+                               >
+                                 {isAiSuggesting ? <Loader2 size={10} className="animate-spin" /> : 'Suggest'}
+                               </button>
+                            </div>
+                          </div>
+
+                          <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-2">
+                             01. Target Core Engine
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                             <EngineCard 
+                               selected={engine === 'v3-stable'} 
+                               onClick={() => selectEngineWithAutoAdvance('v3-stable')}
+                               version="V3 Stable" 
+                               name="Production Pro" 
+                               tag="GLTF · WebVR · Standard" 
+                               desc="Standard optimized assembly for stable frame rendering."
+                               accent="blue" 
+                             />
+                             <EngineCard 
+                               selected={engine === 'v4-beta'} 
+                               onClick={() => selectEngineWithAutoAdvance('v4-beta')}
+                               version="V4 Hyper" 
+                               name="Neural Engine" 
+                               tag="WebGPU · Ray-Tracing" 
+                               desc="Enables cinematic rays and WebGPU compute pipelines."
+                               accent="yellow" 
+                             />
+                             <EngineCard 
+                               selected={engine === 'v2-legacy'} 
+                               onClick={() => selectEngineWithAutoAdvance('v2-legacy')}
+                               version="V2 Edge" 
+                               name="Lightweight Base" 
+                               tag="WASM · Bytecode · Compact" 
+                               desc="Micro footprint binary optimized for edge devices."
+                               accent="green" 
+                             />
+                             <EngineCard 
+                               selected={engine === 'hybrid-custom'} 
+                               onClick={() => selectEngineWithAutoAdvance('hybrid-custom')}
+                               version="V9 Custom" 
+                               name="Manual Bridging" 
+                               tag="Custom · Broad Control" 
+                               desc="Bespoke synthesis allowing full module mapping rules."
+                               accent="purple" 
+                             />
+                          </div>
+
+                          <div className="space-y-3 pt-2">
+                             <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-2">
+                                02. Active Plugins
+                             </div>
+                             <div className="flex flex-wrap gap-2">
+                                <ModuleToggle label="WASI Support" icon="⚡" on={hybridModules.includes('wasi')} onClick={() => toggleModule('wasi')} />
+                                <ModuleToggle label="Asset Stream" icon="📦" on={hybridModules.includes('assets')} onClick={() => toggleModule('assets')} />
+                                <ModuleToggle label="Multiuser Live" icon="👥" on={hybridModules.includes('multiplayer')} onClick={() => toggleModule('multiplayer')} />
+                                <ModuleToggle label="GPU Physics" icon="🎮" on={hybridModules.includes('physics')} onClick={() => toggleModule('physics')} />
+                                <ModuleToggle label="Live Compiler" icon="◈" on={hybridModules.includes('compiler')} onClick={() => toggleModule('compiler')} />
+                                <ModuleToggle label="Mesh Optimizer" icon="◉" on={hybridModules.includes('mesh-opt')} onClick={() => toggleModule('mesh-opt')} />
+                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {currentStep === 'connectivity' && (
+                        <div className="space-y-5">
+                           <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em]">
+                              Configuration Gateway Links
+                           </div>
+
+                           <div className="space-y-4 max-w-xl">
+                              <div className="space-y-1">
+                                 <div className="flex justify-between items-center px-0.5">
+                                    <span className="font-mono text-[9px] font-bold text-[#a78bfa] uppercase tracking-wider">Engine Assembly Path</span>
+                                    <span className="font-mono text-[9px] text-zinc-600 font-medium tracking-wide">WASM GATEWAY URL</span>
+                                 </div>
+                                 <div className="relative flex items-center bg-[#0e1115] border border-[#1b1f26] rounded-lg group focus-within:border-purple-500/30 transition-all">
+                                    <div className="absolute left-3.5 text-[#475569] group-focus-within:text-purple-400 transition-colors">
+                                       <Globe size={14} />
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      value={sources.engine} 
+                                      onChange={e => setSources(prev => ({ ...prev, engine: e.target.value }))}
+                                      onKeyDown={e => e.key === 'Enter' && handleNext()}
+                                      className="w-full bg-transparent border-none py-2.5 pl-10 pr-4 text-[11px] font-mono text-[#f8fafc] outline-none" 
+                                    />
+                                 </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                 <div className="flex justify-between items-center px-0.5">
+                                    <span className="font-mono text-[9px] font-bold text-[#a78bfa] uppercase tracking-wider">Assets Bus Gateway</span>
+                                    <span className="font-mono text-[9px] text-zinc-600 font-medium tracking-wide">CONTENT DEV BUS URL</span>
+                                 </div>
+                                 <div className="relative flex items-center bg-[#0e1115] border border-[#1b1f26] rounded-lg group focus-within:border-purple-500/30 transition-all">
+                                    <div className="absolute left-3.5 text-[#475569] group-focus-within:text-purple-400 transition-colors">
+                                       <Database size={14} />
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      value={sources.assets} 
+                                      onChange={e => setSources(prev => ({ ...prev, assets: e.target.value }))}
+                                      onKeyDown={e => e.key === 'Enter' && handleNext()}
+                                      className="w-full bg-transparent border-none py-2.5 pl-10 pr-4 text-[11px] font-mono text-[#f8fafc] outline-none" 
+                                    />
+                                 </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                 <div className="flex justify-between items-center px-0.5">
+                                    <span className="font-mono text-[9px] font-bold text-[#a78bfa] uppercase tracking-wider">Telemetry Endpoint</span>
+                                    <span className="font-mono text-[9px] text-zinc-600 font-medium tracking-wide">SIGNAL PROTOCOL WS</span>
+                                 </div>
+                                 <div className="relative flex items-center bg-[#0e1115] border border-[#1b1f26] rounded-lg group focus-within:border-purple-500/30 transition-all">
+                                    <div className="absolute left-3.5 text-[#475569] group-focus-within:text-purple-400 transition-colors">
+                                       <Zap size={14} />
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      value={sources.telemetry} 
+                                      onChange={e => setSources(prev => ({ ...prev, telemetry: e.target.value }))}
+                                      onKeyDown={e => e.key === 'Enter' && handleNext()}
+                                      className="w-full bg-transparent border-none py-2.5 pl-10 pr-4 text-[11px] font-mono text-[#f8fafc] outline-none" 
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                      )}
+
+                      {currentStep === 'deployment' && (
+                        <div className="space-y-5">
+                           <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em]">
+                              Deployment Topologies
+                           </div>
+
+                           <div className="grid grid-cols-2 gap-4">
+                              <TopologyCard
+                                id="k8s-pod"
+                                selected={deployment === 'k8s-pod'}
+                                onClick={() => selectTopologyWithAutoAdvance('k8s-pod')}
+                                icon={<Layers size={16} />}
+                                title="Kubernetes Pods"
+                                desc="Scale across load-balanced cloud nodes instantly."
+                                accent="green"
+                              />
+                              <TopologyCard
+                                id="wasm-worker"
+                                selected={deployment === ('wasm-worker' as any)}
+                                onClick={() => selectTopologyWithAutoAdvance('wasm-worker' as any)}
+                                icon={<Zap size={16} />}
+                                title="Wasm Workers"
+                                desc="Zero cold-starts executed on edge nodes globally."
+                                accent="blue"
+                              />
+                              <TopologyCard
+                                id="docker-container"
+                                selected={deployment === ('docker-container' as any)}
+                                onClick={() => selectTopologyWithAutoAdvance('docker-container' as any)}
+                                icon={<Server size={16} />}
+                                title="Docker Isolated"
+                                desc="Container isolation with persistent disk metrics."
+                                accent="yellow"
+                              />
+                              <TopologyCard
+                                id="local-process"
+                                selected={deployment === ('local-process' as any)}
+                                onClick={() => selectTopologyWithAutoAdvance('local-process' as any)}
+                                icon={<Cloud size={16} />}
+                                title="Direct Local Host"
+                                desc="Bypasses networking boundaries using local cycle memory."
+                                accent="purple"
+                              />
+                           </div>
+                        </div>
+                      )}
+
+                      {currentStep === 'synthesis' && (
+                        <div className="space-y-5">
+                           <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-2">
+                              Build Parameters Summary
+                           </div>
+                           
+                           <div className="bg-[#0e1115] border border-[#1b1f26] rounded-xl p-5 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-radial-gradient-glow pointer-events-none" style={{ background: "radial-gradient(circle at top right, rgba(0, 184, 255, 0.04) 0%, transparent 70%)" }} />
+                              <h3 className="text-[10px] font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                                 <Command className="w-3.5 h-3.5 text-[#00b8ff]" /> COMPILER_MANIFEST
+                              </h3>
+                              
+                              <div className="grid grid-cols-2 gap-y-4 gap-x-8 font-mono">
+                                 <div className="border-b border-zinc-900 pb-2.5">
+                                    <span className="text-[9px] text-[#64748b] uppercase block">Synthesized Core</span>
+                                    <span className="text-[11.5px] font-bold text-white uppercase tracking-wide">{engine === 'v4-beta' ? 'Neural_V4' : engine === 'v3-stable' ? 'Stable_V3' : engine === 'v2-legacy' ? 'Light_V2' : 'Hybrid_Custom'}</span>
+                                 </div>
+
+                                 <div className="border-b border-zinc-900 pb-2.5">
+                                    <span className="text-[9px] text-[#64748b] uppercase block">Runtime Topology</span>
+                                    <span className="text-[11.5px] font-bold text-white uppercase tracking-wide">{deployment.replace(/-/g, '_')}</span>
+                                 </div>
+
+                                 <div className="border-b border-zinc-900 pb-2.5">
+                                    <span className="text-[9px] text-[#64748b] uppercase block">Signal Relay URL</span>
+                                    <span className="text-[11px] text-[#00b8ff] truncate block max-w-xs">{sources.telemetry}</span>
+                                 </div>
+
+                                 <div className="border-b border-zinc-900 pb-2.5">
+                                    <span className="text-[9px] text-[#64748b] uppercase block">Delivery CDN</span>
+                                    <span className="text-[11px] text-[#00b8ff] truncate block max-w-xs">{sources.assets}</span>
+                                 </div>
+
+                                 <div className="col-span-2">
+                                    <span className="text-[9px] text-[#64748b] uppercase block mb-1.5">Enabled Assemblies</span>
+                                    <div className="flex flex-wrap gap-1">
+                                       {hybridModules.map(m => (
+                                          <span key={m} className="px-2 py-0.5 bg-white/[0.03] border border-white/5 text-[9.5px] text-[#cbd5e1] rounded uppercase">{m}</span>
+                                       ))}
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="flex items-center gap-3 bg-[#00e5a0]/5 border border-[#00e5a0]/10 rounded-xl p-3">
+                              <div className="w-5 h-5 rounded-full bg-[#00e5a0]/10 flex items-center justify-center text-[#00e5a0] text-[10px] shrink-0">
+                                 ✓
+                              </div>
+                              <div className="text-[11px]">
+                                 <span className="font-bold text-[#00e5a0]">Vetted checks passed.</span> Kernel parameters successfully validated against sandbox guidelines.
+                              </div>
+                           </div>
+                        </div>
+                      )}
+                    </motion.div>
+                 </AnimatePresence>
               </div>
 
-              {/* STEP RENDERERS */}
-              <AnimatePresence mode="wait">
-                <motion.div key={currentStep} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-16">
-                  {currentStep === 'orchestration' && (
-                    <>
-                    <section>
-                      <div className="bg-[#1a1e25]/50 border border-white/5 rounded-2xl p-6 mb-8 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative z-10 flex items-center gap-4">
-                           <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                              <Sparkles size={20} />
-                           </div>
-                           <div className="flex-1">
-                              <h3 className="text-sm font-bold text-white mb-1 uppercase tracking-wider">AI Synthesis Assistant</h3>
-                              <p className="text-xs text-[#94a3b8] font-medium">Describe your project goal and let Gemini suggest the optimal kernel stack.</p>
-                           </div>
-                        </div>
-                        <div className="mt-4 relative flex items-center">
-                           <input 
-                             type="text" 
-                             placeholder="Describe project (e.g. 'Multiplayer ray-traced dungeon explorer')"
-                             className="w-full bg-[#0d0f12] border border-white/10 rounded-xl py-3 pl-4 pr-32 text-xs text-white outline-none focus:border-blue-500/50 transition-all font-medium"
-                             value={aiPrompt}
-                             onChange={(e) => setAiPrompt(e.target.value)}
-                             onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
-                           />
-                           <button 
-                             onClick={handleAiSuggest}
-                             disabled={!aiPrompt.trim() || isAiSuggesting}
-                             className="absolute right-1.5 px-4 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
-                           >
-                             {isAiSuggesting ? <Loader2 size={12} className="animate-spin" /> : 'Suggest'}
-                           </button>
-                        </div>
-                      </div>
-
-                      <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
-                         <span className="text-[#00b8ff]">01.</span> Primary Engine Base
-                      </div>
-                      <div className="grid grid-cols-2 gap-6 mb-2">
-                         <EngineCard 
-                           selected={engine === 'v3-stable'} 
-                           onClick={() => {}} 
-                           onDoubleClick={() => setEngine('v3-stable')}
-                           version="V3 Pro" 
-                           name="Production Engine" 
-                           tag="GLTF / WebVR / Stable" 
-                           desc="The industry standard for high-fidelity web experiences. Optimized for stable frame rates and cross-platform compatibility."
-                           accent="blue" 
-                         />
-                         <EngineCard 
-                           selected={engine === 'v4-beta'} 
-                           onClick={() => {}} 
-                           onDoubleClick={() => setEngine('v4-beta')}
-                           version="V4 Hyper" 
-                           name="Neural Engine" 
-                           tag="Ray-Tracing / Experimental" 
-                           desc="Leverage WebGPU and neural denoising for cinematic fidelity. Supports real-time ray-traced reflections and global illumination."
-                           accent="yellow" 
-                         />
-                         <EngineCard 
-                           selected={engine === 'v2-legacy'} 
-                           onClick={() => {}} 
-                           onDoubleClick={() => setEngine('v2-legacy')}
-                           version="V2 Lite" 
-                           name="Edge Engine" 
-                           tag="Optimized / Low-latency" 
-                           desc="Ultra-lightweight binary optimized for edge devices and low-bandwidth environments. Maximum performance with minimal footprint."
-                           accent="green" 
-                         />
-                         <EngineCard 
-                           selected={engine === 'hybrid-custom'} 
-                           onClick={() => {}} 
-                           onDoubleClick={() => setEngine('hybrid-custom')}
-                           version="Hybrid" 
-                           name="Manual Synthesis" 
-                           tag="Custom / Full control" 
-                           desc="Synthesize a bespoke kernel by manually bridging modules. Recommended for advanced architecture and custom rendering pipelines."
-                           accent="purple" 
-                         />
-                      </div>
-                    </section>
-
-                    <section>
-                      <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d]">
-                         <span className="text-[#00b8ff]">02.</span> Integration Modules
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                         <ModuleToggle label="WASI Engine" icon="⚡" on={hybridModules.includes('wasi')} onClick={() => toggleModule('wasi')} />
-                         <ModuleToggle label="Asset Stream" icon="📦" on={hybridModules.includes('assets')} onClick={() => toggleModule('assets')} />
-                         <ModuleToggle label="Multi-User" icon="👥" on={hybridModules.includes('multiplayer')} onClick={() => toggleModule('multiplayer')} />
-                         <ModuleToggle label="GPU Physics" icon="🎮" on={hybridModules.includes('physics')} onClick={() => toggleModule('physics')} />
-                         <ModuleToggle label="Live Compiler" icon="◈" on={hybridModules.includes('compiler')} onClick={() => toggleModule('compiler')} />
-                         <ModuleToggle label="Mesh Opt" icon="◉" on={hybridModules.includes('mesh-opt')} onClick={() => toggleModule('mesh-opt')} />
-                      </div>
-                    </section>
-                    </>
-                  )}
-
-                  {currentStep === 'connectivity' && (
-                    <>
-                    <section>
-                       <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
-                          <span className="text-[#a78bfa]">02.</span> Core Sources & Routing
-                       </div>
-                       <p className="text-[#cbd5e1] text-[13px] leading-relaxed max-w-[620px] mb-8 font-medium">
-                          Establish secure pipelines for high-performance content delivery and telemetry collection. Define target gateways for live streaming assets and WASI instructions.
-                       </p>
-
-                       <div className="space-y-6 max-w-2xl">
-                          <div className="space-y-2">
-                             <div className="flex justify-between items-center">
-                                <span className="font-mono text-[10px] font-bold text-purple-400 uppercase tracking-widest">Engine Kernel Source</span>
-                                <span className="font-mono text-[10px] text-zinc-500 font-medium">HTTP/HTTPS URL</span>
-                             </div>
-                             <div className="relative flex items-center bg-[#13161b] border border-white/10 rounded-xl group focus-within:border-purple-500/50 transition-all">
-                                <div className="absolute left-4 text-[#8b95a8] group-focus-within:text-purple-400 transition-colors">
-                                   <Globe size={16} />
-                                </div>
-                                <input 
-                                  type="text" 
-                                  value={sources.engine} 
-                                  onChange={e => setSources(prev => ({ ...prev, engine: e.target.value }))}
-                                  className="w-full bg-transparent border-none py-3.5 pl-12 pr-4 text-xs font-mono text-[#f8fafc] outline-none" 
-                                />
-                             </div>
-                          </div>
-
-                          <div className="space-y-2">
-                             <div className="flex justify-between items-center">
-                                <span className="font-mono text-[10px] font-bold text-purple-400 uppercase tracking-widest">Asset Deliveries Bus</span>
-                                <span className="font-mono text-[10px] text-zinc-500 font-medium">CDN Distribution Endpoint</span>
-                             </div>
-                             <div className="relative flex items-center bg-[#13161b] border border-white/10 rounded-xl group focus-within:border-purple-500/50 transition-all">
-                                <div className="absolute left-4 text-[#8b95a8] group-focus-within:text-purple-400 transition-colors">
-                                   <Database size={16} />
-                                </div>
-                                <input 
-                                  type="text" 
-                                  value={sources.assets} 
-                                  onChange={e => setSources(prev => ({ ...prev, assets: e.target.value }))}
-                                  className="w-full bg-transparent border-none py-3.5 pl-12 pr-4 text-xs font-mono text-[#f8fafc] outline-none" 
-                                />
-                             </div>
-                          </div>
-
-                          <div className="space-y-2">
-                             <div className="flex justify-between items-center">
-                                <span className="font-mono text-[10px] font-bold text-purple-400 uppercase tracking-widest">Telemetry Event Stream</span>
-                                <span className="font-mono text-[10px] text-zinc-500 font-medium">Secure WebSocket Protocol</span>
-                             </div>
-                             <div className="relative flex items-center bg-[#13161b] border border-white/10 rounded-xl group focus-within:border-purple-500/50 transition-all">
-                                <div className="absolute left-4 text-[#8b95a8] group-focus-within:text-purple-400 transition-colors">
-                                   <Zap size={16} />
-                                </div>
-                                <input 
-                                  type="text" 
-                                  value={sources.telemetry} 
-                                  onChange={e => setSources(prev => ({ ...prev, telemetry: e.target.value }))}
-                                  className="w-full bg-transparent border-none py-3.5 pl-12 pr-4 text-xs font-mono text-[#f8fafc] outline-none" 
-                                />
-                             </div>
-                          </div>
-                       </div>
-                    </section>
-                    </>
-                  )}
-
-                  {currentStep === 'deployment' && (
-                    <>
-                    <section>
-                       <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
-                          <span className="text-[#10b981]">03.</span> Deployment Topologies
-                       </div>
-                       <p className="text-[#cbd5e1] text-[13px] leading-relaxed max-w-[620px] mb-8 font-medium">
-                          Select the target architecture to host your synthesized runtime environment. Each stack configuration sets localized performance benchmarks and cold-start ratios.
-                       </p>
-
-                       <div className="grid grid-cols-2 gap-6">
-                          <motion.button 
-                            type="button" 
-                            onClick={() => setDeployment('k8s-pod')} 
-                            whileHover={{ y: -8, scale: 1.015 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "text-left border-[1.5px] rounded-2xl p-6 cursor-pointer bg-[#13161b] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50 shadow-2xl transition-all",
-                              deployment === 'k8s-pod' ? "border-[#00e5a0] bg-[#00e5a0]/10 ring-1 ring-[#00e5a0]/20" : "border-[#1f242d] hover:bg-[#1a1e25]"
-                            )}
-                          >
-                             <div className="flex justify-between items-center mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-[#00e5a0]/10 flex items-center justify-center text-[#00e5a0]">
-                                   <Layers size={20} />
-                                </div>
-                                <div className={cn(
-                                  "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                                  deployment === 'k8s-pod' ? "border-[#00e5a0]" : "border-[#252b36]"
-                                )}>
-                                  {deployment === 'k8s-pod' && <div className="w-2 h-2 rounded-full bg-[#00e5a0]" />}
-                                </div>
-                             </div>
-                             <h4 className="text-[15px] font-bold text-white mb-1 uppercase tracking-wider">Kubernetes Pods</h4>
-                             <p className="text-xs text-[#94a3b8] font-medium leading-relaxed">
-                                Orchestrate on resilient cluster pods. Default standard featuring secure sidecars and automatic multi-zone high availability redundancy.
-                             </p>
-                          </motion.button>
-
-                          <motion.button 
-                            type="button" 
-                            onClick={() => setDeployment('wasm-worker' as any)} 
-                            whileHover={{ y: -8, scale: 1.015 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "text-left border-[1.5px] rounded-2xl p-6 cursor-pointer bg-[#13161b] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50 shadow-2xl transition-all",
-                              deployment === ('wasm-worker' as any) ? "border-[#00b8ff] bg-[#00b8ff]/10 ring-1 ring-[#00b8ff]/20" : "border-[#1f242d] hover:bg-[#1a1e25]"
-                            )}
-                          >
-                             <div className="flex justify-between items-center mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-[#00b8ff]">
-                                   <Zap size={20} />
-                                </div>
-                                <div className={cn(
-                                  "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                                  deployment === ('wasm-worker' as any) ? "border-[#00b8ff]" : "border-[#252b36]"
-                                )}>
-                                  {deployment === ('wasm-worker' as any) && <div className="w-2 h-2 rounded-full bg-[#00b8ff]" />}
-                                </div>
-                             </div>
-                             <h4 className="text-[15px] font-bold text-white mb-1 uppercase tracking-wider">Wasm Edge worker</h4>
-                             <p className="text-xs text-[#94a3b8] font-medium leading-relaxed">
-                                Decentralized edge computing. Deploy sandboxed WASI workers on global networks for zero cold starts and sub-millisecond route response.
-                             </p>
-                          </motion.button>
-
-                          <motion.button 
-                            type="button" 
-                            onClick={() => setDeployment('docker-container' as any)} 
-                            whileHover={{ y: -8, scale: 1.015 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "text-left border-[1.5px] rounded-2xl p-6 cursor-pointer bg-[#13161b] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50 shadow-2xl transition-all",
-                              deployment === ('docker-container' as any) ? "border-[#f5c842] bg-[#f5c842]/10 ring-1 ring-[#f5c842]/20" : "border-[#1f242d] hover:bg-[#1a1e25]"
-                            )}
-                          >
-                             <div className="flex justify-between items-center mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400">
-                                   <Server size={20} />
-                                </div>
-                                <div className={cn(
-                                  "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                                  deployment === ('docker-container' as any) ? "border-[#f5c842]" : "border-[#252b36]"
-                                )}>
-                                  {deployment === ('docker-container' as any) && <div className="w-2 h-2 rounded-full bg-[#f5c842]" />}
-                                </div>
-                             </div>
-                             <h4 className="text-[15px] font-bold text-white mb-1 uppercase tracking-wider">Docker Container</h4>
-                             <p className="text-xs text-[#94a3b8] font-medium leading-relaxed">
-                                Fully isolated container execution. Maximum dependency range support, static network addresses, and persistent internal storage mounts.
-                             </p>
-                          </motion.button>
-
-                          <motion.button 
-                            type="button" 
-                            onClick={() => setDeployment('local-process' as any)} 
-                            whileHover={{ y: -8, scale: 1.015 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "text-left border-[1.5px] rounded-2xl p-6 cursor-pointer bg-[#13161b] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50 shadow-2xl transition-all",
-                              deployment === ('local-process' as any) ? "border-purple-400 bg-purple-500/10 ring-1 ring-purple-500/20" : "border-[#1f242d] hover:bg-[#1a1e25]"
-                            )}
-                          >
-                             <div className="flex justify-between items-center mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                                   <Cloud size={20} />
-                                </div>
-                                <div className={cn(
-                                  "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                                  deployment === ('local-process' as any) ? "border-[#a78bfa]" : "border-[#252b36]"
-                                )}>
-                                  {deployment === ('local-process' as any) && <div className="w-2 h-2 rounded-full bg-[#a78bfa]" />}
-                                </div>
-                             </div>
-                             <h4 className="text-[15px] font-bold text-white mb-1 uppercase tracking-wider">Local Host Process</h4>
-                             <p className="text-xs text-[#94a3b8] font-medium leading-relaxed">
-                                Executed straight on host resources. Highly responsive sandbox bypassing remote network limitations. Excellent for localized testing.
-                             </p>
-                          </motion.button>
-                       </div>
-                    </section>
-                    </>
-                  )}
-
-                  {currentStep === 'synthesis' && (
-                    <>
-                    <section>
-                       <div className="text-[12px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center gap-4 mb-6 after:content-[''] after:flex-1 after:h-[1px] after:bg-[#1f242d] selection:bg-none">
-                          <span className="text-[#a78bfa]">04.</span> Synthesis Consolidation
-                       </div>
-                       
-                       <div className="bg-[#13161b] border border-white/5 rounded-2xl p-8 relative overflow-hidden mb-8">
-                          <div className="absolute top-0 right-0 w-64 h-64 bg-radial-gradient-glow pointer-events-none" style={{ background: "radial-gradient(circle at top right, rgba(0, 184, 255, 0.08) 0%, transparent 70%)" }} />
-                          <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
-                             <Command className="w-5 h-5 text-[#00b8ff]" /> Orchestrated Build Parameters
-                          </h3>
-                          
-                          <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                             <div className="border-b border-white/5 pb-4">
-                                <span className="font-mono text-[10px] text-zinc-500 uppercase font-black tracking-widest block mb-1">Synthesized Engine Version</span>
-                                <span className="text-[14px] font-bold text-white uppercase">{engine === 'v4-beta' ? 'V4 Neural Hyper' : engine === 'v3-stable' ? 'V3 Production Pro' : engine === 'v2-legacy' ? 'V2 Edge Lite' : 'Hybrid Manual Synthesis'}</span>
-                             </div>
-
-                             <div className="border-b border-white/5 pb-4">
-                                <span className="font-mono text-[10px] text-zinc-500 uppercase font-black tracking-widest block mb-1">Configured Runtime Cluster</span>
-                                <span className="text-[14px] font-bold text-white uppercase">{deployment === 'k8s-pod' ? 'Kubernetes Pod' : deployment === ('wasm-worker' as any) ? 'Wasm Edge Worker' : deployment === ('docker-container' as any) ? 'Docker Container' : 'Local Host Process'}</span>
-                             </div>
-
-                             <div className="border-b border-white/5 pb-4">
-                                <span className="font-mono text-[10px] text-zinc-500 uppercase font-black tracking-widest block mb-1">Orchestration Sources IP</span>
-                                <span className="text-xs font-mono text-[#00b8ff] break-all">{sources.engine}</span>
-                             </div>
-
-                             <div className="border-b border-white/5 pb-4">
-                                <span className="font-mono text-[10px] text-zinc-500 uppercase font-black tracking-widest block mb-1">CDN Asset Bus</span>
-                                <span className="text-xs font-mono text-[#00b8ff] break-all">{sources.assets}</span>
-                             </div>
-
-                             <div className="col-span-2">
-                                <span className="font-mono text-[10px] text-zinc-500 uppercase font-black tracking-widest block mb-3">Loaded Plugins ({hybridModules.length})</span>
-                                <div className="flex flex-wrap gap-2">
-                                   {hybridModules.map(m => (
-                                      <span key={m} className="px-3 py-1 bg-white/5 border border-white/5 text-[11px] font-mono text-[#cbd5e1] rounded-lg tracking-wide capitalize">{m} module</span>
-                                   ))}
-                                </div>
-                             </div>
-                          </div>
-                       </div>
-
-                       <div className="flex items-center gap-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-5">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-[14px]">
-                             ✓
-                          </div>
-                          <div>
-                             <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-widest">Compiler Checks Passed</h4>
-                             <p className="text-xs text-[#94a3b8] font-medium leading-relaxed mt-0.5">WASI sandboxing configurations have been verified against active local instance values. Kernel builds ready.</p>
-                          </div>
-                       </div>
-                    </section>
-                    </>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-
               {/* FOOTER ACTIONS */}
-              <footer className="mt-12 pt-8 border-t border-[#1f242d] flex items-center justify-between">
-                <span className="font-mono text-[11px] text-[#64748b] font-bold tracking-[0.15em] uppercase">
-                   Phase {currentIndex + 1} / 4 · {currentStep.replace(/-/g, '_')}
+              <footer className="mt-8 pt-5 border-t border-[#151921] flex items-center justify-between shrink-0">
+                <span className="font-mono text-[10px] text-[#64748b] font-bold tracking-wider uppercase">
+                   Phase {currentIndex + 1} / 4
                 </span>
                 <button 
                   onClick={handleNext}
-                  className="bg-[#00b8ff] hover:bg-[#33c9ff] text-black font-bold font-mono text-[13px] px-8 py-3 rounded-lg shadow-[0_0_25px_rgba(0,184,255,0.3)] hover:-translate-y-1 transition-all flex items-center gap-3 group active:scale-95"
+                  className="bg-[#00b8ff] hover:bg-[#33c9ff] text-black font-bold font-mono text-[11.5px] px-6 py-2.5 rounded shadow-[0_0_15px_rgba(0,184,255,0.2)] hover:-translate-y-0.5 transition-all flex items-center gap-2 group active:scale-95 cursor-pointer"
                 >
-                  {currentStep === 'synthesis' ? 'INITIATE_SYNTHESIS' : 'NEXT_PHASE'}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1.5 transition-transform">
+                  {currentStep === 'synthesis' ? 'INIT_COMPILER' : 'CONTINUE_PHASE'}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
                 </button>
@@ -574,40 +507,41 @@ export default function SetupGate() {
            </div>
         </main>
 
-        {/* RIGHT PANEL: AUDIT */}
-        <aside className="bg-[#13161b] border-l border-[#1f242d] p-5 overflow-y-auto no-scrollbar">
-           <div className="font-mono text-[10px] font-semibold tracking-[0.12em] text-[#94a3b8] uppercase mb-4">Kernel Config</div>
-           <div className="space-y-0">
-              <SpecRow label="ENGINE" value={engine === 'v4-beta' ? 'V4 Hyper' : engine === 'v3-stable' ? 'V3 Pro' : engine === 'v2-legacy' ? 'V2 Lite' : 'Hybrid'} color="accent" />
-              <SpecRow label="RENDER" value={engine === 'v4-beta' ? 'RAY-TRACING' : 'GLTF / WEBVR'} />
-              <SpecRow label="RUNTIME" value="WASI ACTIVE" color="green" />
-              <SpecRow label="GPU" value={hybridModules.includes('physics') ? "PHYSICS ON" : "IDLE"} color={hybridModules.includes('physics') ? "green" : "dim"} />
-              <SpecRow label="CLUSTER" value={deployment.toUpperCase().replace(/-/g, '_')} />
-              <SpecRow label="FPS" value="60" color="green" />
-              <SpecRow label="MODULES" value={`${hybridModules.length} active`} color="yellow" />
-              <SpecRow label="STATUS" value="Ready" color="green" />
+        {/* RIGHT PANEL: AUDIT HUD */}
+        <aside className="bg-[#0b0c10] border-l border-[#151921] p-4 flex flex-col justify-between overflow-y-auto no-scrollbar">
+           <div>
+              <div className="font-mono text-[10px] font-bold tracking-[0.15em] text-[#64748b] uppercase mb-3">Live Console</div>
+              <div className="space-y-0.5">
+                 <SpecRow label="ENGINE" value={engine === 'v4-beta' ? 'V4 Neural' : engine === 'v3-stable' ? 'V3 Pro' : engine === 'v2-legacy' ? 'V2 Lite' : 'Hybrid'} color="accent" />
+                 <SpecRow label="RENDERER" value={engine === 'v4-beta' ? 'RAYTRACED' : 'GLTF/WEBVR'} />
+                 <SpecRow label="RUNTIME" value="WASI_ON" color="green" />
+                 <SpecRow label="ACCEL" value={hybridModules.includes('physics') ? "ACTIVE" : "OFF"} color={hybridModules.includes('physics') ? "green" : "dim"} />
+                 <SpecRow label="HOST" value={deployment.toUpperCase().replace(/-/g, '_')} />
+                 <SpecRow label="TARGET_FPS" value="60" color="green" />
+                 <SpecRow label="PLUGINS" value={`${hybridModules.length} active`} color="yellow" />
+              </div>
            </div>
 
-           <div className="mt-5 bg-[#0d0f12] border border-[#1f242d] rounded-md p-3 font-mono text-[10px] leading-[1.8] min-h-[140px]">
-              <div className="flex gap-2 text-[#94a3b8]">
+           <div className="mt-4 bg-[#06070a] border border-[#151921] rounded p-2.5 font-mono text-[9.5px] leading-relaxed min-h-[120px] text-zinc-500">
+              <div className="flex gap-1">
                 <span className="text-[#00e5a0]">›</span>
-                <span className="text-[#cbd5e1]">Kernel_Synthesis init</span>
+                <span>system_synthesis ready</span>
               </div>
-              <div className="flex gap-2 text-[#64748b]">
+              <div className="flex gap-1">
                 <span className="text-[#00e5a0]">›</span>
-                <span className="text-[#cbd5e1]">Loading {engine === 'v3-stable' ? 'V3 Pro' : 'core'}...</span>
+                <span>loading model {engine}...</span>
               </div>
-              <div className="flex gap-2 text-[#64748b]">
+              <div className="flex gap-1">
                 <span className="text-[#00e5a0]">›</span>
-                <span className="text-[#94a3b8]">WASI engine attached</span>
+                <span>WASI sub-pipes active</span>
               </div>
-              <div className="flex gap-2 text-[#64748b]">
+              <div className="flex gap-1">
                 <span className="text-[#00e5a0]">›</span>
-                <span className="text-[#94a3b8]">Worker PID 4821</span>
+                <span>host connection: ok</span>
               </div>
-              <div className="flex gap-2 text-[#4a5568]">
-                <span className="text-[#00e5a0]">✓</span>
-                <span className="text-[#00e5a0]">Stack ready</span>
+              <div className="flex gap-1 text-[#00e5a0]">
+                <span>✓</span>
+                <span>ready to consolidate</span>
               </div>
            </div>
         </aside>
@@ -616,21 +550,16 @@ export default function SetupGate() {
       <style dangerouslySetInnerHTML={{ __html: `
         .nav-btn-user {
           font-family: 'JetBrains Mono', monospace;
-          font-size: 11px;
-          padding: 5px 12px;
-          border-radius: 5px;
-          border: 1px solid #252b36;
+          font-size: 10px;
+          padding: 4px 10px;
+          border-radius: 4px;
+          border: 1px solid #1c212b;
           background: transparent;
-          color: #8b95a8;
+          color: #64748b;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.1s;
         }
-        .nav-btn-user:hover { color: #e2e8f0; border-color: #4a5568; }
-        .nav-divider-v { width: 1px; height: 20px; background: #252b36; }
-        .container-custom { display: grid; grid-template-columns: 220px 1fr 280px; flex: 1; min-height: 0; }
-        @media (max-width: 768px) {
-          .container-custom { grid-template-columns: 1fr; }
-        }
+        .nav-btn-user:hover { color: #f8fafc; border-color: #3b4252; }
       `}} />
     </div>
   );
@@ -641,36 +570,33 @@ function PhaseItem({ num, name, status, onClick }: { num: string, name: string, 
     <motion.button 
       type="button"
       onClick={onClick}
-      whileHover={{ x: 4 }}
+      whileHover={{ x: 3 }}
       className={cn(
-        "w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50",
-        status === 'active' ? "bg-[#00b8ff]/10 border border-[#00b8ff]/20" : "hover:bg-[#1a1e25]"
+        "w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded transition-all cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-[#00b8ff]/40",
+        status === 'active' ? "bg-[#00b8ff]/5 border border-[#00b8ff]/10" : "border border-transparent hover:bg-white/[0.01]"
       )}
     >
        <div className={cn(
-         "w-2 h-2 rounded-full shrink-0",
+         "w-1.5 h-1.5 rounded-full shrink-0",
          status === 'done' ? "bg-[#00e5a0]" : 
-         status === 'active' ? "bg-[#00b8ff] shadow-[0_0_10px_#00b8ff]" : "bg-[#64748b]"
+         status === 'active' ? "bg-[#00b8ff] shadow-[0_0_8px_#00b8ff]" : "bg-[#475569]"
        )} />
-       <div className="flex gap-2.5 items-baseline">
+       <div className="flex gap-2 items-baseline text-left">
           <span className={cn(
-            "font-mono text-[11px] font-bold min-w-[22px]",
+            "font-mono text-[10px] font-bold min-w-[15px]",
             status === 'done' ? "text-[#00e5a0]" : 
             status === 'active' ? "text-[#00b8ff]" : "text-[#475569]"
           )}>{num}</span>
           <span className={cn(
-            "text-[13px] transition-colors",
-            status === 'active' ? "text-[#f8fafc] font-bold" : "text-[#94a3b8]"
+            "text-[12px] transition-colors tracking-wide",
+            status === 'active' ? "text-zinc-100 font-bold" : "text-zinc-500 font-medium"
           )}>{name}</span>
        </div>
     </motion.button>
   );
 }
 
-function EngineCard({ selected, onClick, onDoubleClick, version, name, tag, desc, accent }: any) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+function EngineCard({ selected, onClick, version, name, tag, desc, accent }: any) {
   const accentColors = {
     blue: "text-[#00b8ff]",
     yellow: "text-[#f5c842]",
@@ -678,66 +604,32 @@ function EngineCard({ selected, onClick, onDoubleClick, version, name, tag, desc
     purple: "text-[#a78bfa]"
   };
 
-  const accentBorders = {
-    blue: "border-[#00b8ff]/30",
-    yellow: "border-[#f5c842]/30",
-    green: "border-[#00e5a0]/30",
-    purple: "border-[#a78bfa]/30"
-  };
-  
-  const showInfo = isHovered || isExpanded;
-  
   return (
     <motion.button 
       type="button"
-      onClick={() => {
-        setIsExpanded(!isExpanded);
-        onClick?.();
-      }}
-      onDoubleClick={onDoubleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ y: -8, scale: 1.015 }}
-      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      whileHover={{ y: -3, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
       className={cn(
-        "text-left border-[1.5px] rounded-2xl p-6 cursor-pointer transition-all bg-[#13161b] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50 shadow-2xl",
-        selected ? "border-[#00b8ff] bg-[#00b8ff]/10 ring-1 ring-[#00b8ff]/20" : "border-[#1f242d] hover:bg-[#1a1e25]",
-        showInfo && !selected && accentBorders[accent as keyof typeof accentBorders]
+        "text-left border rounded-xl p-4 cursor-pointer transition-all bg-[#0e1115] relative overflow-hidden group outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/40",
+        selected ? "border-[#00b8ff] bg-[#00b8ff]/5 shadow-[0_0_15px_rgba(0,184,255,0.05)]" : "border-[#1b1f26] hover:bg-[#12161c] hover:border-zinc-700"
       )}
     >
-       {selected && <motion.div layoutId="accent-line" className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-[#00b8ff] to-[#0077ff]" />}
-       <div className="flex items-start justify-between mb-3">
-          <span className={cn("font-mono text-[11px] font-bold tracking-[0.1em] uppercase", accentColors[accent as keyof typeof accentColors])}>{version}</span>
+       {selected && <div className="absolute top-0 inset-x-0 h-[2.5px] bg-gradient-to-r from-[#00b8ff] to-[#a78bfa]" />}
+       <div className="flex items-start justify-between mb-2">
+          <span className={cn("font-mono text-[9px] font-bold tracking-wider uppercase", accentColors[accent as keyof typeof accentColors])}>{version}</span>
           <div className={cn(
-            "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-            selected ? "border-[#00b8ff]" : "border-[#252b36]"
+            "w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center",
+            selected ? "border-[#00b8ff]" : "border-[#1b1f26]"
           )}>
-            {selected && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-2 h-2 rounded-full bg-[#00b8ff]" />}
+            {selected && <div className="w-1.5 h-1.5 rounded-full bg-[#00b8ff]" />}
           </div>
        </div>
-       <div className="text-[15px] font-extrabold text-[#f8fafc] mb-1 group-hover:text-[#fff] transition-colors">{name}</div>
-       <div className="font-mono text-[10px] text-[#64748b] font-bold tracking-wider mb-2">{tag}</div>
-       
-       <AnimatePresence initial={false}>
-         {showInfo && (
-           <motion.div 
-             initial={{ height: 0, opacity: 0 }}
-             animate={{ height: "auto", opacity: 1 }}
-             exit={{ height: 0, opacity: 0 }}
-             className="overflow-hidden"
-           >
-             <p className="text-[13px] text-[#cbd5e1] mt-4 leading-relaxed border-t border-white/5 pt-4 font-medium">
-               {desc}
-             </p>
-             <div className="mt-5 flex items-center gap-2 text-[10px] font-black text-[#00b8ff] uppercase tracking-[0.25em] opacity-90">
-                <span>Double click to confirm</span>
-                <motion.div animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                  <ChevronRight size={13} />
-                </motion.div>
-             </div>
-           </motion.div>
-         )}
-       </AnimatePresence>
+       <div className="text-[13px] font-bold text-[#f8fafc] mb-0.5 group-hover:text-white transition-colors">{name}</div>
+       <div className="font-mono text-[8.5px] text-[#64748b] font-bold tracking-wider mb-2">{tag}</div>
+       <p className="text-[11px] text-[#cbd5e1] leading-relaxed border-t border-[#1b1f26] pt-3 font-normal">
+          {desc}
+       </p>
     </motion.button>
   );
 }
@@ -747,16 +639,69 @@ function ModuleToggle({ label, icon, on, onClick }: any) {
     <motion.button 
       type="button"
       onClick={onClick}
-      whileHover={{ scale: 1.05, y: -2 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.03, y: -1 }}
+      whileTap={{ scale: 0.97 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-2.5 rounded-xl border text-[13px] font-bold cursor-pointer transition-all select-none outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/50",
-        on ? "border-[#00b8ff] bg-[#00b8ff]/15 text-[#00b8ff] shadow-[0_0_15px_rgba(0,184,255,0.1)]" : "border-[#252b36] bg-[#13161b] text-[#cbd5e1] hover:border-[#4a5568] hover:text-[#f8fafc]"
+        "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all select-none outline-none focus-visible:ring-1 focus-visible:ring-[#00b8ff]/40",
+        on ? "border-[#00b8ff] bg-[#00b8ff]/10 text-[#00b8ff] shadow-[0_0_10px_rgba(0,184,255,0.05)]" : "border-[#1b1f26] bg-[#0c1015] text-[#cbd5e1] hover:border-zinc-700 hover:text-white"
       )}
     >
-       <span className="text-[15px]">{icon}</span>
+       <span className="text-[12px]">{icon}</span>
        <span>{label}</span>
-       <div className={cn("w-2 h-2 rounded-full transition-all ml-1", on ? "bg-[#00b8ff] shadow-[0_0_10px_#00b8ff]" : "bg-[#475569]")} />
+       <div className={cn("w-1.5 h-1.5 rounded-full transition-all ml-0.5", on ? "bg-[#00b8ff]" : "bg-[#475569]")} />
+    </motion.button>
+  );
+}
+
+function TopologyCard({ selected, onClick, icon, title, desc, accent }: any) {
+  const bgColors = {
+    green: "bg-[#00e5a0]/5",
+    blue: "bg-[#00b8ff]/5",
+    yellow: "bg-[#f5c842]/5",
+    purple: "bg-[#a78bfa]/5"
+  };
+
+  const textColors = {
+    green: "text-[#00e5a0]",
+    blue: "text-[#00b8ff]",
+    yellow: "text-[#f5c842]",
+    purple: "text-[#a78bfa]"
+  };
+
+  const borderColors = {
+    green: "border-[#00e5a0]/40",
+    blue: "border-[#00b8ff]/40",
+    yellow: "border-[#f5c842]/40",
+    purple: "border-[#a78bfa]/40"
+  };
+
+  return (
+    <motion.button 
+      type="button" 
+      onClick={onClick} 
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      className={cn(
+        "text-left border rounded-xl p-3.5 cursor-pointer bg-[#0e1115] relative overflow-hidden flex items-start gap-3 transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#00b8ff]/40",
+        selected ? `border-current ${bgColors[accent as keyof typeof bgColors]} shadow-[0_0_12px_rgba(255,255,255,0.02)]` : "border-[#1b1f26] hover:bg-[#12161c] hover:border-zinc-700"
+      )}
+      style={{
+        borderColor: selected ? undefined : '',
+        color: selected ? (accent === 'green' ? '#00e5a0' : accent === 'blue' ? '#00b8ff' : accent === 'yellow' ? '#f5c842' : '#a78bfa') : undefined
+      }}
+    >
+       <div className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0 border border-white/5", selected ? bgColors[accent as keyof typeof bgColors] + " " + textColors[accent as keyof typeof textColors] : "bg-[#0c1015] text-[#64748b]")}>
+          {icon}
+       </div>
+       <div className="space-y-0.5">
+          <div className="flex items-center justify-between gap-2">
+             <h4 className="text-[12px] font-bold text-white uppercase tracking-wider">{title}</h4>
+             {selected && <div className={cn("w-1.5 h-1.5 rounded-full select-indicator", textColors[accent as keyof typeof textColors])} style={{ backgroundColor: 'currentColor' }} />}
+          </div>
+          <p className="text-[11px] text-[#cbd5e1] leading-relaxed font-normal">
+             {desc}
+          </p>
+       </div>
     </motion.button>
   );
 }
@@ -766,13 +711,13 @@ function SpecRow({ label, value, color }: { label: string, value: string, color?
     accent: "text-[#00b8ff]",
     green: "text-[#00e5a0]",
     yellow: "text-[#f5c842]",
-    dim: "text-[#8b95a8]"
+    dim: "text-[#64748b]"
   };
   
   return (
-    <div className="flex justify-between items-center py-2.5 border-b border-[#1f242d] last:border-none">
-       <span className="font-mono text-[10px] text-[#94a3b8] uppercase font-semibold tracking-wider">{label}</span>
-       <span className={cn("text-[12px] font-medium text-right", color ? colorMap[color as keyof typeof colorMap] : "text-[#e2e8f0]")}>{value}</span>
+    <div className="flex justify-between items-center py-2 border-b border-zinc-900 last:border-none">
+       <span className="font-mono text-[9px] text-[#64748b] uppercase font-bold tracking-wider">{label}</span>
+       <span className={cn("text-[11px] font-medium tracking-wide text-right font-mono", color ? colorMap[color as keyof typeof colorMap] : "text-[#cbd5e1]")}>{value}</span>
     </div>
   );
 }

@@ -43,8 +43,10 @@ interface WorkspaceContextType {
   setupConfig: WorkspaceSetup | null;
   hybridSplit: boolean;
   synthesisStatus: 'idle' | 'synthesizing' | 'complete';
+  activeEngineId: 'unreal' | 'playcanvas' | 'unity' | 'three';
   setHybridSplit: (val: boolean) => void;
   setSynthesisStatus: (status: 'idle' | 'synthesizing' | 'complete') => void;
+  spinUpEnginePod: (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => void;
   
   setFiles: (files: FileNode[]) => void;
   completeSetup: (setup: WorkspaceSetup) => void;
@@ -83,7 +85,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([
     { id: '1', message: 'Canvas ready for spatial reconstruction', type: 'info', timestamp: Date.now() }
   ]);
-  const [viewMode, setViewMode] = useState<ViewMode>('design');
+  const [viewMode, setViewMode] = useState<ViewMode>('pod-studio');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAgentSidebarOpen, setAgentSidebarOpen] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
@@ -113,12 +115,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
   const [hybridSplit, setHybridSplit] = useState(false);
   const [synthesisStatus, setSynthesisStatus] = useState<'idle' | 'synthesizing' | 'complete'>('idle');
+  const [activeEngineId, setActiveEngineId] = useState<'unreal' | 'playcanvas' | 'unity' | 'three'>('three');
 
   // Persistence Logic
   useEffect(() => {
     const savedSetup = localStorage.getItem('spatial_setup');
     const savedEntities = localStorage.getItem('spatial_entities');
     const savedScenes = localStorage.getItem('spatial_scenes');
+    const savedEngine = localStorage.getItem('spatial_active_engine');
 
     if (savedSetup) {
       const parsedSetup = JSON.parse(savedSetup);
@@ -130,6 +134,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
     if (savedScenes) {
       setScenes(JSON.parse(savedScenes));
+    }
+    if (savedEngine) {
+      setActiveEngineId(savedEngine as any);
     }
   }, []);
 
@@ -146,6 +153,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('spatial_scenes', JSON.stringify(scenes));
   }, [scenes]);
+
+  useEffect(() => {
+    localStorage.setItem('spatial_active_engine', activeEngineId);
+  }, [activeEngineId]);
 
   const [pods, setPods] = useState<Pod[]>([
     { id: 'p1', name: 'api-server-7fb9-d8s', status: 'Running', cpu: 12, memory: 256, restarts: 0, age: '4d 2h', node: 'node-01', namespace: 'default' },
@@ -192,6 +203,43 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setPods(prev => prev.map(p => p.id === id ? { ...p, status: 'Running', cpu: 10, memory: 256 } : p));
       addAgentLog(`Pod successfully restarted`, 'success');
     }, 3000);
+  };
+
+  const spinUpEnginePod = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => {
+    setActiveEngineId(engineId);
+    addAgentLog(`Provisioning Kubernetes pod for engine template: ${engineId.toUpperCase()}`, 'thinking');
+    
+    setPods(prev => {
+      const filtered = prev.filter(p => !['p_unreal', 'p_playcanvas', 'p_unity', 'p_three'].includes(p.id));
+      const newPod: Pod = {
+        id: `p_${engineId}`,
+        name: engineId === 'unreal' ? 'unreal-editor-render-pod' :
+              engineId === 'playcanvas' ? 'playcanvas-studio-node-pod' :
+              engineId === 'unity' ? 'unity-wasm-reflect-pod' : 'threejs-webgpu-sandbox-pod',
+        status: 'Pending',
+        cpu: 1,
+        memory: 128,
+        restarts: 0,
+        age: '1s',
+        node: engineId === 'unreal' ? 'node-gpu-01' : 'node-02',
+        namespace: 'engine'
+      };
+      return [...filtered, newPod];
+    });
+
+    setTimeout(() => {
+      addAgentLog(`Connecting storage claims & starting compiler stream on port 3000...`, 'info');
+    }, 1000);
+
+    setTimeout(() => {
+      setPods(prev => prev.map(p => p.id === `p_${engineId}` ? {
+        ...p,
+        status: 'Running',
+        cpu: engineId === 'unreal' ? 84 : engineId === 'playcanvas' ? 35 : engineId === 'unity' ? 55 : 20,
+        memory: engineId === 'unreal' ? 3072 : engineId === 'playcanvas' ? 1024 : engineId === 'unity' ? 1536 : 512,
+      } : p));
+      addAgentLog(`[k8s] ${engineId.toUpperCase()} workspace container in running state! Port 3000 is open.`, 'success');
+    }, 2500);
   };
 
   const addAgentLog = (message: string, type: AgentLog['type'] = 'info') => {
@@ -358,10 +406,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceContext.Provider value={{
       files, tabs, activeTabPath, terminalLogs, agentLogs, viewMode, isSidebarOpen, isAgentSidebarOpen, isAgentThinking, targetUrl, config, pipelineItems, entities, prefabs, scenes, currentSceneId, pods, isSetupComplete, setupConfig,
-      hybridSplit, synthesisStatus, setHybridSplit, setSynthesisStatus,
+      hybridSplit, synthesisStatus, setHybridSplit, setSynthesisStatus, activeEngineId,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
       setViewMode, setSidebarOpen, setAgentSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
-      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, completeSetup
+      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, completeSetup, spinUpEnginePod
     }}>
       {children}
     </WorkspaceContext.Provider>

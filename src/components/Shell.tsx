@@ -12,6 +12,8 @@ import ProjectSettings from './ProjectSettings';
 import AgentSidebar from './AgentSidebar';
 import KubernetesView from './KubernetesView';
 import AIAssistant from './AIAssistant';
+import PluginsView from './PluginsView';
+import PodStudio from './PodStudio';
 import { ChevronDown, BrainCircuit, Box, Sparkles, Layers } from 'lucide-react';
 
 const COLORS = {
@@ -37,6 +39,7 @@ const COLORS = {
 };
 
 const NAV_TABS = [
+  { id: "pod-studio", label: "📦 3D Pod Studio" },
   { id: "assistant", label: "AI Intelligence" },
   { id: "infrastructure", label: "Clusters & Pods" },
   { id: "design", label: "UI Design" },
@@ -44,6 +47,7 @@ const NAV_TABS = [
   { id: "spatial", label: "Spatial View" },
   { id: "code", label: "Source Code" },
   { id: "pipeline", label: "Asset Pipeline" },
+  { id: "plugins", label: "Plugins & Exts" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -79,6 +83,7 @@ export default function Shell() {
     }
 
     switch(viewMode) {
+      case 'pod-studio': return <PodStudio />;
       case 'design': return <CanvasEditor />;
       case 'engine': return <EngineEditor />;
       case 'spatial': return <SpatialView />;
@@ -87,6 +92,7 @@ export default function Shell() {
       case 'pipeline': return <GltfPipeline />;
       case 'infrastructure': return <KubernetesView />;
       case 'assistant': return <AIAssistant />;
+      case 'plugins': return <PluginsView />;
       default: return <SpatialView />;
     }
   };

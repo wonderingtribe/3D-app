@@ -26,6 +26,27 @@ export default function CanvasEditor() {
   const [activeTool, setActiveTool] = useState<'select' | 'place'>('select');
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Creative Overlay Modal States
+  const [creationModalOpen, setCreationModalOpen] = useState(false);
+  const [creationName, setCreationName] = useState('New Entity');
+  const [creationType, setCreationType] = useState<'mesh' | 'light'>('mesh');
+  const [creationCoords, setCreationCoords] = useState({ x: 0, y: 0 });
+
+  // Custom Prompt Modal States
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptTitle, setPromptTitle] = useState('');
+  const [promptValue, setPromptValue] = useState('');
+  const [promptPlaceholder, setPromptPlaceholder] = useState('');
+  const [onPromptSubmit, setOnPromptSubmit] = useState<((val: string) => void) | null>(null);
+
+  const triggerPrompt = (title: string, defaultValue: string, placeholder: string, callback: (val: string) => void) => {
+    setPromptTitle(title);
+    setPromptValue(defaultValue);
+    setPromptPlaceholder(placeholder);
+    setOnPromptSubmit(() => callback);
+    setPromptOpen(true);
+  };
+
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (activeTool !== 'place' || !containerRef.current) return;
     
@@ -36,24 +57,27 @@ export default function CanvasEditor() {
     const x = e.clientX - rect.left - 200; // Offset for centered origin or just local coord
     const y = e.clientY - rect.top;
 
-    const name = window.prompt("Enter Entity Name:", "New Entity");
-    if (!name) return;
+    setCreationCoords({ x, y });
+    setCreationName(`Node_${Math.floor(Math.random() * 900 + 100)}`);
+    setCreationType('mesh');
+    setCreationModalOpen(true);
+  };
 
-    const type = window.confirm("Is this a Light? (Cancel for Mesh)") ? 'light' : 'mesh';
-
+  const handleConfirmCreation = () => {
     addEntity({
-      type,
-      name,
-      x: x,
-      y: y,
-      z: type === 'light' ? 5 : 1,
+      type: creationType,
+      name: creationName,
+      x: creationCoords.x,
+      y: creationCoords.y,
+      z: creationType === 'light' ? 5 : 1,
       scale: 1,
       rotation: 0,
       properties: {},
     });
 
-    addAgentLog(`Placed new ${type} '${name}' at ${Math.round(x)}, ${Math.round(y)}`, 'info');
+    addAgentLog(`Placed new ${creationType} '${creationName}' at ${Math.round(creationCoords.x)}, ${Math.round(creationCoords.y)}`, 'info');
     setActiveTool('select');
+    setCreationModalOpen(false);
   };
 
   const addNewEntity = (type: WorldEntity['type']) => {
@@ -118,23 +142,25 @@ export default function CanvasEditor() {
     }
     
     const selectedEntities = entities.filter(e => selectedNodes.includes(e.id));
-    const name = window.prompt("Enter Prefab Name for group:", "New Group Prefab") || "Group Prefab";
     
-    const avgX = selectedEntities.reduce((sum, e) => sum + e.x, 0) / selectedEntities.length;
-    const avgY = selectedEntities.reduce((sum, e) => sum + e.y, 0) / selectedEntities.length;
-    
-    const children = selectedEntities.map(e => ({
-       ...e,
-       x: e.x - avgX,
-       y: e.y - avgY
-    }));
-    
-    addPrefab({
-      name,
-      type: 'group',
-      properties: { children }
+    triggerPrompt("Group Prefab Name", "New Group Prefab", "Enter group label name", (name) => {
+      const pName = name.trim() || "Group Prefab";
+      const avgX = selectedEntities.reduce((sum, e) => sum + e.x, 0) / selectedEntities.length;
+      const avgY = selectedEntities.reduce((sum, e) => sum + e.y, 0) / selectedEntities.length;
+      
+      const children = selectedEntities.map(e => ({
+         ...e,
+         x: e.x - avgX,
+         y: e.y - avgY
+      }));
+      
+      addPrefab({
+        name: pName,
+        type: 'group',
+        properties: { children }
+      });
+      addAgentLog(`Defined new grouped prefab from ${selectedNodes.length} entities`, 'success');
     });
-    addAgentLog(`Defined new grouped prefab from ${selectedNodes.length} entities`, 'success');
   };
 
   return (
@@ -211,8 +237,9 @@ export default function CanvasEditor() {
           </div>
           <button 
             onClick={() => {
-              const name = prompt("New Scene Name:");
-              if (name) createScene(name);
+              triggerPrompt("New Scene Name", "New Scene", "Enter scene label", (name) => {
+                if (name.trim()) createScene(name.trim());
+              });
             }}
             className="p-1 hover:bg-ui-accent hover:text-white rounded transition-colors"
           >
@@ -272,8 +299,10 @@ export default function CanvasEditor() {
           </div>
           <button 
             onClick={() => {
-              const name = prompt("Scene Name:", scenes.find(s => s.id === currentSceneId)?.name || 'New Scene');
-              if (name) saveScene(name);
+              const currentName = scenes.find(s => s.id === currentSceneId)?.name || 'New Scene';
+              triggerPrompt("Save Scene", currentName, "Enter scene label", (name) => {
+                if (name.trim()) saveScene(name.trim());
+              });
             }}
             className="p-2 hover:bg-ui-panel border border-ui-border rounded-lg text-ui-text-muted transition-all"
             title="Save Current Scene"
@@ -381,6 +410,116 @@ export default function CanvasEditor() {
 
           {isAIArchitectOpen && (
             <AIArchitect onClose={() => setIsAIArchitectOpen(false)} />
+          )}
+
+          {/* Custom Creation Dialog */}
+          {creationModalOpen && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-[#0c0d12] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider mb-1">Assemble Entity Node</h3>
+                <p className="text-[10px] text-zinc-500 uppercase font-mono mb-4">Coordinates: X:{Math.round(creationCoords.x)} Y:{Math.round(creationCoords.y)}</p>
+                
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-zinc-400 uppercase font-bold">Node Label</label>
+                    <input 
+                      type="text"
+                      className="w-full bg-[#111318] border border-white/5 rounded-xl p-2.5 text-xs text-zinc-200 outline-none focus:border-ui-accent"
+                      value={creationName}
+                      onChange={(e) => setCreationName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-zinc-400 uppercase font-bold block">Engine Class</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button 
+                        type="button"
+                        onClick={() => setCreationType('mesh')}
+                        className={cn(
+                          "py-2 rounded-xl text-xs font-bold transition-all border",
+                          creationType === 'mesh' ? "bg-ui-accent/10 border-ui-accent text-ui-text" : "bg-transparent border-white/5 text-zinc-500 hover:border-white/10"
+                        )}
+                      >
+                        Mesh Base
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setCreationType('light')}
+                        className={cn(
+                          "py-2 rounded-xl text-xs font-bold transition-all border",
+                          creationType === 'light' ? "bg-amber-500/10 border-amber-500 text-amber-400" : "bg-transparent border-white/5 text-zinc-500 hover:border-white/10"
+                        )}
+                      >
+                        Light Emit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <button 
+                    type="button"
+                    onClick={() => setCreationModalOpen(false)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold text-zinc-400 bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleConfirmCreation}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-colors"
+                  >
+                    Assemble Node
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Custom Prompt Dialog */}
+          {promptOpen && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-[#0c0d12] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider mb-4">{promptTitle}</h3>
+                
+                <div className="space-y-4">
+                  <input 
+                    type="text"
+                    className="w-full bg-[#111318] border border-white/5 rounded-xl p-2.5 text-xs text-zinc-200 outline-none focus:border-ui-accent"
+                    placeholder={promptPlaceholder}
+                    value={promptValue}
+                    onChange={(e) => setPromptValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onPromptSubmit?.(promptValue);
+                        setPromptOpen(false);
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <button 
+                    type="button"
+                    onClick={() => setPromptOpen(false)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold text-zinc-400 bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      onPromptSubmit?.(promptValue);
+                      setPromptOpen(false);
+                    }}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-colors"
+                  >
+                    Apply Label
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
