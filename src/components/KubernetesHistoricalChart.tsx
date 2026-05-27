@@ -37,6 +37,7 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
   const [timeRange, setTimeRange] = useState<'30m' | '24h'>('24h');
   const [activeMetric, setActiveMetric] = useState<'cpu' | 'latency' | 'both'>('both');
   const [dimensions, setDimensions] = useState({ width: 500, height: 260 });
+  const [chartLayout, setChartLayout] = useState<'area' | 'bar'>('area');
   
   // Keep track of hover/tooltip state
   const [hoveredPoint, setHoveredPoint] = useState<HistoricalPoint | null>(null);
@@ -281,78 +282,120 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
       .call(g => g.select('.domain').attr('stroke', 'rgba(255,255,255,0.08)'))
       .call(g => g.selectAll('.tick line').attr('stroke', 'rgba(255,255,255,0.08)'));
 
-    // Draw CPU Line and Area Fill
-    if (activeMetric === 'cpu' || activeMetric === 'both') {
-      const cpuArea = d3.area<HistoricalPoint>()
-        .x(d => xScale(d.time))
-        .y0(height - margin.bottom)
-        .y1(d => yCpuScale(d.cpu))
-        .curve(d3.curveMonotoneX);
+    // Render chart graphics based on format
+    const stepWidth = (width - margin.left - margin.right) / historicalData.length;
+    const barWidth = Math.max(3, stepWidth * 0.38);
 
-      svg.append('path')
-        .datum(historicalData)
-        .attr('class', 'area')
-        .attr('fill', 'url(#cpuGrad)')
-        .attr('d', cpuArea);
+    if (chartLayout === 'bar') {
+      // Draw CPU BARS
+      if (activeMetric === 'cpu' || activeMetric === 'both') {
+        const xOffset = activeMetric === 'both' ? -barWidth : -barWidth / 2;
+        svg.append('g')
+          .attr('class', 'cpu-bars')
+          .selectAll('rect')
+          .data(historicalData)
+          .enter()
+          .append('rect')
+          .attr('x', d => xScale(d.time) + xOffset)
+          .attr('y', d => yCpuScale(d.cpu))
+          .attr('width', barWidth)
+          .attr('height', d => Math.max(0, height - margin.bottom - yCpuScale(d.cpu)))
+          .attr('fill', '#00b8ff')
+          .attr('opacity', 0.8)
+          .attr('rx', 1.5);
+      }
 
-      const cpuLine = d3.line<HistoricalPoint>()
-        .x(d => xScale(d.time))
-        .y(d => yCpuScale(d.cpu))
-        .curve(d3.curveMonotoneX);
+      // Draw Latency BARS
+      if (activeMetric === 'latency' || activeMetric === 'both') {
+        const xOffset = activeMetric === 'both' ? 0 : -barWidth / 2;
+        svg.append('g')
+          .attr('class', 'latency-bars')
+          .selectAll('rect')
+          .data(historicalData)
+          .enter()
+          .append('rect')
+          .attr('x', d => xScale(d.time) + xOffset)
+          .attr('y', d => yLatencyScale(d.latency))
+          .attr('width', barWidth)
+          .attr('height', d => Math.max(0, height - margin.bottom - yLatencyScale(d.latency)))
+          .attr('fill', '#a78bfa')
+          .attr('opacity', 0.8)
+          .attr('rx', 1.5);
+      }
+    } else {
+      // Draw CPU Line and Area Fill
+      if (activeMetric === 'cpu' || activeMetric === 'both') {
+        const cpuArea = d3.area<HistoricalPoint>()
+          .x(d => xScale(d.time))
+          .y0(height - margin.bottom)
+          .y1(d => yCpuScale(d.cpu))
+          .curve(d3.curveMonotoneX);
 
-      // Shadow glow path (blur overlay)
-      svg.append('path')
-        .datum(historicalData)
-        .attr('fill', 'none')
-        .attr('stroke', '#00b8ff')
-        .attr('stroke-width', 4)
-        .attr('opacity', 0.15)
-        .attr('d', cpuLine);
+        svg.append('path')
+          .datum(historicalData)
+          .attr('class', 'area')
+          .attr('fill', 'url(#cpuGrad)')
+          .attr('d', cpuArea);
 
-      // Primary core path
-      svg.append('path')
-        .datum(historicalData)
-        .attr('fill', 'none')
-        .attr('stroke', '#00b8ff')
-        .attr('stroke-width', 1.8)
-        .attr('d', cpuLine);
-    }
+        const cpuLine = d3.line<HistoricalPoint>()
+          .x(d => xScale(d.time))
+          .y(d => yCpuScale(d.cpu))
+          .curve(d3.curveMonotoneX);
 
-    // Draw Latency Line and Area Fill
-    if (activeMetric === 'latency' || activeMetric === 'both') {
-      const latArea = d3.area<HistoricalPoint>()
-        .x(d => xScale(d.time))
-        .y0(height - margin.bottom)
-        .y1(d => yLatencyScale(d.latency))
-        .curve(d3.curveMonotoneX);
+        // Shadow glow path (blur overlay)
+        svg.append('path')
+          .datum(historicalData)
+          .attr('fill', 'none')
+          .attr('stroke', '#00b8ff')
+          .attr('stroke-width', 4)
+          .attr('opacity', 0.15)
+          .attr('d', cpuLine);
 
-      svg.append('path')
-        .datum(historicalData)
-        .attr('class', 'area')
-        .attr('fill', 'url(#latGrad)')
-        .attr('d', latArea);
+        // Primary core path
+        svg.append('path')
+          .datum(historicalData)
+          .attr('fill', 'none')
+          .attr('stroke', '#00b8ff')
+          .attr('stroke-width', 1.8)
+          .attr('d', cpuLine);
+      }
 
-      const latLine = d3.line<HistoricalPoint>()
-        .x(d => xScale(d.time))
-        .y(d => yLatencyScale(d.latency))
-        .curve(d3.curveMonotoneX);
+      // Draw Latency Line and Area Fill
+      if (activeMetric === 'latency' || activeMetric === 'both') {
+        const latArea = d3.area<HistoricalPoint>()
+          .x(d => xScale(d.time))
+          .y0(height - margin.bottom)
+          .y1(d => yLatencyScale(d.latency))
+          .curve(d3.curveMonotoneX);
 
-      // Shadow glow line
-      svg.append('path')
-        .datum(historicalData)
-        .attr('fill', 'none')
-        .attr('stroke', '#a78bfa')
-        .attr('stroke-width', 4)
-        .attr('opacity', 0.15)
-        .attr('d', latLine);
+        svg.append('path')
+          .datum(historicalData)
+          .attr('class', 'area')
+          .attr('fill', 'url(#latGrad)')
+          .attr('d', latArea);
 
-      // Primary path
-      svg.append('path')
-        .datum(historicalData)
-        .attr('fill', 'none')
-        .attr('stroke', '#a78bfa')
-        .attr('stroke-width', 1.8)
-        .attr('d', latLine);
+        const latLine = d3.line<HistoricalPoint>()
+          .x(d => xScale(d.time))
+          .y(d => yLatencyScale(d.latency))
+          .curve(d3.curveMonotoneX);
+
+        // Shadow glow line
+        svg.append('path')
+          .datum(historicalData)
+          .attr('fill', 'none')
+          .attr('stroke', '#a78bfa')
+          .attr('stroke-width', 4)
+          .attr('opacity', 0.15)
+          .attr('d', latLine);
+
+        // Primary path
+        svg.append('path')
+          .datum(historicalData)
+          .attr('fill', 'none')
+          .attr('stroke', '#a78bfa')
+          .attr('stroke-width', 1.8)
+          .attr('d', latLine);
+      }
     }
 
     // Highlight Bottlenecks directly on the lines
@@ -362,13 +405,19 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
     const dotsGroup = svg.append('g').attr('class', 'bottleneck-markers');
     
     bottlenecks.forEach(b => {
-      const x = xScale(b.time);
+      let xCpu = xScale(b.time);
+      let xLat = xScale(b.time);
+
+      if (chartLayout === 'bar') {
+        xCpu += (activeMetric === 'both' ? -barWidth / 2 : 0);
+        xLat += (activeMetric === 'both' ? barWidth / 2 : 0);
+      }
       
       if (b.bottleneckType === 'CPU_SPIKE' && (activeMetric === 'cpu' || activeMetric === 'both')) {
         const y = yCpuScale(b.cpu);
         // Outer pulsing hazard ring
         dotsGroup.append('circle')
-          .attr('cx', x)
+          .attr('cx', xCpu)
           .attr('cy', y)
           .attr('r', 6)
           .attr('fill', 'rgba(239, 68, 68, 0.2)')
@@ -377,7 +426,7 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
           .attr('class', 'animate-pulse');
 
         dotsGroup.append('circle')
-          .attr('cx', x)
+          .attr('cx', xCpu)
           .attr('cy', y)
           .attr('r', 3.5)
           .attr('fill', '#ef4444');
@@ -387,7 +436,7 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
         const y = yLatencyScale(b.latency);
         
         dotsGroup.append('circle')
-          .attr('cx', x)
+          .attr('cx', xLat)
           .attr('cy', y)
           .attr('r', 6)
           .attr('fill', 'rgba(245, 158, 11, 0.2)')
@@ -395,7 +444,7 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
           .attr('stroke-width', 1);
 
         dotsGroup.append('circle')
-          .attr('cx', x)
+          .attr('cx', xLat)
           .attr('cy', y)
           .attr('r', 3.5)
           .attr('fill', '#f59e0b');
@@ -489,14 +538,21 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
         hoverGroup.style('display', null);
         trackerLine.attr('x1', targetX).attr('x2', targetX);
 
+        let targetCpuX = targetX;
+        let targetLatX = targetX;
+        if (chartLayout === 'bar') {
+          targetCpuX += (activeMetric === 'both' ? -barWidth / 2 : 0);
+          targetLatX += (activeMetric === 'both' ? barWidth / 2 : 0);
+        }
+
         if (activeMetric === 'cpu' || activeMetric === 'both') {
-          cpuIntersect.attr('cx', targetX).attr('cy', yCpuScale(point.cpu)).style('display', null);
+          cpuIntersect.attr('cx', targetCpuX).attr('cy', yCpuScale(point.cpu)).style('display', null);
         } else {
           cpuIntersect.style('display', 'none');
         }
 
         if (activeMetric === 'latency' || activeMetric === 'both') {
-          latIntersect.attr('cx', targetX).attr('cy', yLatencyScale(point.latency)).style('display', null);
+          latIntersect.attr('cx', targetLatX).attr('cy', yLatencyScale(point.latency)).style('display', null);
         } else {
           latIntersect.style('display', 'none');
         }
@@ -513,7 +569,7 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
       setHoverCoords(null);
     });
 
-  }, [historicalData, activeMetric, dimensions, timeRange]);
+  }, [historicalData, activeMetric, dimensions, timeRange, chartLayout]);
 
   return (
     <div className="bg-[#111318] border border-white/5 rounded-2xl p-5 space-y-4 relative overflow-hidden group">
@@ -570,6 +626,22 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
               className={`px-3 py-1 rounded transition-all lowercase ${activeMetric === 'latency' ? 'bg-purple-500/15 text-[#a78bfa]' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               latency
+            </button>
+          </div>
+
+          {/* Chart Layout Toggle */}
+          <div className="flex bg-black/40 border border-white/5 rounded p-0.5 font-bold">
+            <button
+              onClick={() => setChartLayout('area')}
+              className={`px-2.5 py-1 rounded transition-all lowercase ${chartLayout === 'area' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              area
+            </button>
+            <button
+              onClick={() => setChartLayout('bar')}
+              className={`px-2.5 py-1 rounded transition-all lowercase ${chartLayout === 'bar' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              bar
             </button>
           </div>
 
@@ -657,20 +729,25 @@ export default function KubernetesHistoricalChart({ pods }: KubernetesHistorical
           
           {/* Main D3 canvas element */}
           <div ref={containerRef} className="w-full bg-[#08090d]/65 border border-white/[0.02] rounded-xl relative overflow-hidden flex items-center justify-center p-2 min-h-[240px]">
-            <svg ref={svgRef} className="w-full" style={{ height: dimensions.height }} />
+            <svg 
+              id="kubernetes-historical-chart-d3-svg" 
+              ref={svgRef} 
+              className="w-full" 
+              style={{ height: dimensions.height }} 
+            />
 
             {/* Static overlay legends */}
             <div className="absolute top-3 left-4 flex gap-4 text-[8px] font-bold tracking-widest text-[#64748b] bg-black/40 backdrop-blur px-2.5 py-1.5 rounded-md border border-white/5 uppercase">
               { (activeMetric === 'cpu' || activeMetric === 'both') && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#00b8ff]" />
-                  <span>CPU LINE (LEFT AXIS)</span>
+                  <span>{chartLayout === 'bar' ? 'CPU BARS' : 'CPU LINE'} (LEFT AXIS)</span>
                 </div>
               )}
               { (activeMetric === 'latency' || activeMetric === 'both') && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#a78bfa]" />
-                  <span>LATENCY LINE (RIGHT AXIS)</span>
+                  <span>{chartLayout === 'bar' ? 'LATENCY BARS' : 'LATENCY LINE'} (RIGHT AXIS)</span>
                 </div>
               )}
             </div>
