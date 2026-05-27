@@ -40,7 +40,15 @@ export default function PodStudio() {
 
   // Startup Choice Gate Launcher States
   const [isStudioBooted, setIsStudioBooted] = useState(false);
-  const [selectedLaunchEngine, setSelectedLaunchEngine] = useState<'three' | 'playcanvas' | 'unity' | 'unreal'>('three');
+  const [selectedLaunchEngine, setSelectedLaunchEngine] = useState<'three' | 'babylon' | 'playcanvas'>(() => {
+    const saved = localStorage.getItem('wonder_space_selected_engine');
+    return (saved === 'three' || saved === 'babylon' || saved === 'playcanvas') ? saved : 'three';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('wonder_space_selected_engine', selectedLaunchEngine);
+  }, [selectedLaunchEngine]);
+
   const [selectedLaunchEditor, setSelectedLaunchEditor] = useState<'inspector' | 'terminal' | 'kubernetes' | 'ai-helper'>('inspector');
   const [compilerProfile, setCompilerProfile] = useState<'production' | 'debug_telemetry' | 'harness'>('production');
   const [isBooting, setIsBooting] = useState(false);
@@ -182,7 +190,13 @@ export default function PodStudio() {
 
     // 1. Compile real Three.js Scene and Context
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#08090c');
+    if (activeEngineId === 'babylon') {
+      scene.background = new THREE.Color('#12131a'); // Babylon classic dark violet space
+    } else if (activeEngineId === 'playcanvas') {
+      scene.background = new THREE.Color('#050608'); // PlayCanvas sleek engine carbon black
+    } else {
+      scene.background = new THREE.Color('#08090c'); // ThreeJS standard slate mesh space
+    }
 
     // 2. Perspective view projection representation
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
@@ -202,30 +216,98 @@ export default function PodStudio() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // 4. Physical illumination sources
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
-    scene.add(ambientLight);
+    if (activeEngineId === 'babylon') {
+      const ambientLight = new THREE.AmbientLight(0xd9e2ec, 0.45);
+      scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    keyLight.position.set(5, 8, 6);
-    scene.add(keyLight);
+      const hemLight = new THREE.HemisphereLight(0xfffae6, 0xbfdbfe, 1.3);
+      scene.add(hemLight);
 
-    const rimLight = new THREE.DirectionalLight(new THREE.Color(albedoColor), 1.2);
-    rimLight.position.set(-6, 3, -6);
-    scene.add(rimLight);
+      const keyLight = new THREE.DirectionalLight(0xe2e8f0, 1.4);
+      keyLight.position.set(5, 8, 6);
+      scene.add(keyLight);
 
-    const pointLight = new THREE.PointLight(new THREE.Color('#00d4ff'), 6, 8);
-    pointLight.position.set(0, 2, 0);
-    scene.add(pointLight);
+      const pointLight = new THREE.PointLight(new THREE.Color('#818cf8'), 5, 10);
+      pointLight.position.set(0, 2, 0);
+      scene.add(pointLight);
+    } else if (activeEngineId === 'playcanvas') {
+      const ambientLight = new THREE.AmbientLight(0x0a0c10, 0.2);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffa83e, 2.0);
+      keyLight.position.set(5, 8, 6);
+      scene.add(keyLight);
+
+      const neonRimLight = new THREE.DirectionalLight(0xff4500, 1.6);
+      neonRimLight.position.set(-6, 3, -6);
+      scene.add(neonRimLight);
+
+      const orangeIndicator = new THREE.PointLight(new THREE.Color('#ff8400'), 8, 12);
+      orangeIndicator.position.set(0, 2, 0);
+      scene.add(orangeIndicator);
+    } else {
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      keyLight.position.set(5, 8, 6);
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(new THREE.Color(albedoColor), 1.2);
+      rimLight.position.set(-6, 3, -6);
+      scene.add(rimLight);
+
+      const pointLight = new THREE.PointLight(new THREE.Color('#00d4ff'), 6, 8);
+      pointLight.position.set(0, 2, 0);
+      scene.add(pointLight);
+    }
 
     // 5. Grid Helper and Axes guides (standard ground floor layout)
     if (showGrid) {
-      const grid = new THREE.GridHelper(30, 24, '#1b1f28', '#10131a');
+      let color1 = '#1b1f28';
+      let color2 = '#10131a';
+      if (activeEngineId === 'babylon') {
+        color1 = '#4c5375';
+        color2 = '#1c1d29';
+      } else if (activeEngineId === 'playcanvas') {
+        color1 = '#ff8800';
+        color2 = '#190e00';
+      }
+      const grid = new THREE.GridHelper(30, 24, color1, color2);
       grid.position.y = -1.8;
       scene.add(grid);
 
       const axes = new THREE.AxesHelper(3);
       axes.position.y = -1.79;
       scene.add(axes);
+    }
+
+    // Secondary Floating Engine Identity Accents Group
+    const floatGroup = new THREE.Group();
+    scene.add(floatGroup);
+
+    if (activeEngineId === 'babylon') {
+      // Babylon signature: rotating glowing coordinate orbit ring
+      const torusGeo = new THREE.RingGeometry(2.1, 2.15, 32);
+      const torusMat = new THREE.MeshBasicMaterial({ color: 0x818cf8, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+      const ring = new THREE.Mesh(torusGeo, torusMat);
+      ring.position.set(posX, posY - 1.5, posZ + 5);
+      ring.rotation.x = Math.PI / 2;
+      floatGroup.add(ring);
+    } else if (activeEngineId === 'playcanvas') {
+      // PlayCanvas signature: four orbiting amber helper cubes
+      for (let i = 0; i < 4; i++) {
+        const pGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xffa500, wireframe: true });
+        const pMesh = new THREE.Mesh(pGeo, pMat);
+        const angle = (i * Math.PI) / 2;
+        pMesh.position.set(
+          posX + Math.cos(angle) * 2.1,
+          posY - 1.5,
+          posZ + 5 + Math.sin(angle) * 2.1
+        );
+        floatGroup.add(pMesh);
+      }
     }
 
     // 6. Geometry builder
@@ -302,6 +384,15 @@ export default function PodStudio() {
         mesh.scale.set(scaleX * multiplier, scaleY * multiplier, scaleZ * multiplier);
       }
 
+      // Rotate active float group elements
+      localTime += 0.01;
+      if (activeEngineId === 'babylon') {
+        floatGroup.rotation.y += 0.008;
+      } else if (activeEngineId === 'playcanvas') {
+        floatGroup.rotation.y += 0.025;
+        floatGroup.position.y = Math.sin(localTime * 3) * 0.12;
+      }
+
       if (boundingBoxHelper) {
         boundingBoxHelper.update();
       }
@@ -340,7 +431,8 @@ export default function PodStudio() {
   }, [
     posX, posY, posZ, rotX, rotY, rotZ, scaleX, scaleY, scaleZ,
     albedoColor, metallic, roughness, geometryType, wireframeMode, 
-    showGrid, showBoundingBoxes, camZoom, camPitch, camYaw, scriptBinding, gizmoMode
+    showGrid, showBoundingBoxes, camZoom, camPitch, camYaw, scriptBinding, gizmoMode,
+    activeEngineId
   ]);
 
   // Jitter performance counters to make them feel live & realistic
@@ -469,10 +561,12 @@ export default function PodStudio() {
       setAiResponse('I have customized the primary mesh material color parameter to pure red (#f43f5e).');
     } else if (query.includes('playcanvas') || query.includes('spin up play')) {
       spinUpEnginePod('playcanvas');
-      setAiResponse('Provisioned a lightweight Node compiler pod with Playcanvas Studio on Port 3001.');
-    } else if (query.includes('unreal')) {
-      spinUpEnginePod('unreal');
-      setAiResponse('I have triggered the GKE controller to provision Unreal Engine 5 render node with raytracing.');
+      setSelectedLaunchEngine('playcanvas');
+      setAiResponse('Provisioned a lightweight Node compiler pod with Playcanvas Studio on Port 3000.');
+    } else if (query.includes('babylon') || query.includes('spin up babylon')) {
+      spinUpEnginePod('babylon');
+      setSelectedLaunchEngine('babylon');
+      setAiResponse('I have triggered the GKE controller to provision Babylon.js Standard render node with standard hemispheric illumination.');
     } else {
       setAiResponse(`Understood! I will analyze the configuration for "${query}". I've queued a build output event check.`);
     }
@@ -619,9 +713,8 @@ export default function PodStudio() {
                   <div className="space-y-2">
                     {[
                       { id: 'three', title: 'Three.js Core', desc: 'Direct WebGL hardware acceleration, true physical material simulations, robust lightings model.', label: 'ACTIVE' },
-                      { id: 'playcanvas', title: 'PlayCanvas', desc: 'Experimental WebGPU backend renderer for lightning-fast buffer pipeline bindings.', label: 'EXPERIMENTAL' },
-                      { id: 'unity', title: 'Unity WebGL', desc: 'Pre-compiled WebAssembly container runtime with standalone C# telemetry hooks.', label: 'HEAVY' },
-                      { id: 'unreal', title: 'Unreal Engine 5', desc: 'Streamed high-fidelity remote GKE node instance featuring raytracing parameters.', label: 'RTX BETA' },
+                      { id: 'babylon', title: 'Babylon.js Standard', desc: 'Complete feature-rich physically-based engine featuring hemispheric lighting and full debug layers.', label: 'STABLE' },
+                      { id: 'playcanvas', title: 'PlayCanvas Frame', desc: 'High-performance WebGL context with customized high-contrast orange shaders and WASM acceleration.', label: 'EXPERIMENTAL' },
                     ].map(eng => (
                       <button
                         key={eng.id}
@@ -1055,11 +1148,12 @@ export default function PodStudio() {
               {/* Remote compilation engine selection shortcuts */}
               <div className="border-t border-white/5 pt-2 space-y-1">
                 <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block text-center">engine blueprint</span>
-                <div className="grid grid-cols-2 gap-1">
-                  {['three', 'playcanvas', 'unity', 'unreal'].map(engine => (
+                <div className="grid grid-cols-3 gap-1">
+                  {['three', 'babylon', 'playcanvas'].map(engine => (
                     <button 
                       key={engine}
                       onClick={() => {
+                        setSelectedLaunchEngine(engine as any);
                         spinUpEnginePod(engine as any);
                         addAgentLog(`Provisioning container pod with ${engine.toUpperCase()} layout.`, 'info');
                       }}
@@ -1068,7 +1162,7 @@ export default function PodStudio() {
                         activeEngineId === engine ? 'border-[#00d4ff] text-[#00d4ff] bg-[#00d4ff]/10' : 'border-white/5 text-zinc-500 hover:text-zinc-300'
                       )}
                     >
-                      {engine === 'three' ? 'WGPU' : engine === 'playcanvas' ? 'PLAYC' : engine.toUpperCase()}
+                      {engine === 'three' ? 'THREE' : engine === 'babylon' ? 'BABY' : 'PC'}
                     </button>
                   ))}
                 </div>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Pod } from '../types';
+import KubernetesHistoricalChart from './KubernetesHistoricalChart';
 
 export default function KubernetesView() {
   const { pods, refreshPods, rebootPod, activeEngineId, spinUpEnginePod } = useWorkspace();
@@ -111,6 +112,9 @@ export default function KubernetesView() {
           <StatCard icon={<Network className="w-4 h-4" />} label="NETWORK_IO" value={`${stats.net} GB/s`} trend="+124MB" color="text-emerald-400" />
           <StatCard icon={<HardDrive className="w-4 h-4" />} label="DISK_OPS" value={`${stats.storage} IOPS`} trend="STABLE" color="text-orange-400" />
         </div>
+
+        {/* D3 Historical Pod Loading Chart */}
+        <KubernetesHistoricalChart pods={pods} />
 
         {/* Engine Provisioning Registry */}
         <div className="space-y-4">

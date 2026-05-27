@@ -43,10 +43,10 @@ interface WorkspaceContextType {
   setupConfig: WorkspaceSetup | null;
   hybridSplit: boolean;
   synthesisStatus: 'idle' | 'synthesizing' | 'complete';
-  activeEngineId: 'unreal' | 'playcanvas' | 'unity' | 'three';
+  activeEngineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon';
   setHybridSplit: (val: boolean) => void;
   setSynthesisStatus: (status: 'idle' | 'synthesizing' | 'complete') => void;
-  spinUpEnginePod: (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => void;
+  spinUpEnginePod: (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon') => void;
   
   setFiles: (files: FileNode[]) => void;
   completeSetup: (setup: WorkspaceSetup) => void;
@@ -115,7 +115,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
   const [hybridSplit, setHybridSplit] = useState(false);
   const [synthesisStatus, setSynthesisStatus] = useState<'idle' | 'synthesizing' | 'complete'>('idle');
-  const [activeEngineId, setActiveEngineId] = useState<'unreal' | 'playcanvas' | 'unity' | 'three'>('three');
+  const [activeEngineId, setActiveEngineId] = useState<'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon'>('three');
 
   // Persistence Logic
   useEffect(() => {
@@ -205,23 +205,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }, 3000);
   };
 
-  const spinUpEnginePod = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => {
+  const spinUpEnginePod = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon') => {
     setActiveEngineId(engineId);
     addAgentLog(`Provisioning Kubernetes pod for engine template: ${engineId.toUpperCase()}`, 'thinking');
     
     setPods(prev => {
-      const filtered = prev.filter(p => !['p_unreal', 'p_playcanvas', 'p_unity', 'p_three'].includes(p.id));
+      const filtered = prev.filter(p => !['p_unreal', 'p_playcanvas', 'p_unity', 'p_three', 'p_babylon'].includes(p.id));
       const newPod: Pod = {
         id: `p_${engineId}`,
         name: engineId === 'unreal' ? 'unreal-editor-render-pod' :
               engineId === 'playcanvas' ? 'playcanvas-studio-node-pod' :
+              engineId === 'babylon' ? 'babylon-standard-render-pod' :
               engineId === 'unity' ? 'unity-wasm-reflect-pod' : 'threejs-webgpu-sandbox-pod',
         status: 'Pending',
         cpu: 1,
         memory: 128,
         restarts: 0,
         age: '1s',
-        node: engineId === 'unreal' ? 'node-gpu-01' : 'node-02',
+        node: ['unreal', 'babylon'].includes(engineId) ? 'node-gpu-01' : 'node-02',
         namespace: 'engine'
       };
       return [...filtered, newPod];
@@ -235,8 +236,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setPods(prev => prev.map(p => p.id === `p_${engineId}` ? {
         ...p,
         status: 'Running',
-        cpu: engineId === 'unreal' ? 84 : engineId === 'playcanvas' ? 35 : engineId === 'unity' ? 55 : 20,
-        memory: engineId === 'unreal' ? 3072 : engineId === 'playcanvas' ? 1024 : engineId === 'unity' ? 1536 : 512,
+        cpu: engineId === 'unreal' ? 84 : engineId === 'playcanvas' ? 35 : engineId === 'babylon' ? 42 : engineId === 'unity' ? 55 : 20,
+        memory: engineId === 'unreal' ? 3072 : engineId === 'playcanvas' ? 1024 : engineId === 'babylon' ? 1280 : engineId === 'unity' ? 1536 : 512,
       } : p));
       addAgentLog(`[k8s] ${engineId.toUpperCase()} workspace container in running state! Port 3000 is open.`, 'success');
     }, 2500);

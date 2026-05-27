@@ -67,6 +67,85 @@ export default function Shell() {
   } = useWorkspace();
   const [deployOpen, setDeployOpen] = useState(false);
 
+  // Dynamic high-fidelity deploy simulation states
+  const [isDeployingCloudRun, setIsDeployingCloudRun] = useState(false);
+  const [cloudRunProgress, setCloudRunProgress] = useState(0);
+  const [cloudRunLogs, setCloudRunLogs] = useState<string[]>([]);
+  
+  const [isVerifyingCluster, setIsVerifyingCluster] = useState(false);
+  const [verifyProgress, setVerifyProgress] = useState(0);
+  const [verifyLogs, setVerifyLogs] = useState<string[]>([]);
+
+  const handleDeployCloudRun = () => {
+    setDeployOpen(false);
+    setIsDeployingCloudRun(true);
+    setCloudRunProgress(0);
+    setCloudRunLogs(["[INFO] Accessing Cloud Artifact Registry permissions..."]);
+    addAgentLog?.("Initiating Google Cloud Run container deployment...", "thinking");
+
+    const logsList = [
+      "[INFO] Bundling application source artifacts & assets buffers...",
+      "[INFO] Executing npm run build (Bundling React & Node.js)",
+      "[SUCCESS] Production build compiled (dist/ index & server assets).",
+      "[DOCKER] Packaging container image under tag: gcr.io/wonder-space-3d/preview-run:v2",
+      "[DOCKER] Pushing container blocks to cache context... [64.2 MB]",
+      "[SUCCESS] Artifact uploaded securely to Google Cloud Container registry.",
+      "[GCP] Accessing Cloud Run instance APIs: region=us-central1 (low-latency-tier)",
+      "[GCP] Provisioning virtual VM instance... Allocated virtual vCPUs=2, RAM=4GB",
+      "[NET] Mapping incoming listener container entry directly to Port 3000...",
+      "[SUCCESS] Deep Deployment complete! Live run route: https://spatial-live-preview.run.app"
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      currentStep++;
+      setCloudRunProgress(Math.min(100, Math.floor((currentStep / logsList.length) * 100)));
+      const newLn = logsList[currentStep - 1];
+      if (newLn) {
+        setCloudRunLogs(prev => [...prev, newLn]);
+        addAgentLog?.(newLn, newLn.includes('[SUCCESS]') ? 'success' : 'info');
+      }
+
+      if (currentStep >= logsList.length) {
+        clearInterval(interval);
+        addAgentLog?.("Google Cloud Run deployment complete! Container online.", "success");
+      }
+    }, 450);
+  };
+
+  const handleVerifyCluster = () => {
+    setDeployOpen(false);
+    setIsVerifyingCluster(true);
+    setVerifyProgress(0);
+    setVerifyLogs(["[DIAG] Initiating local Kubernetes Cluster and WASI validation..."]);
+    addAgentLog?.("Verifying kernel network connectivity and Port 3000 mapping...", "thinking");
+
+    const logsList = [
+      "[DIAG] Pinging host api-server: dev-3d-environments (100% resolution)",
+      "[DIAG] Checking Port 3000 ingress channel... Route fully accessible.",
+      "[DIAG] Validating active WASI system call bindings... Passed.",
+      "[DIAG] Reviewing active graphics middleware bindings (ThreeJS/Babylon)... Safe.",
+      "[DIAG] Checking container allocation... NVIDIA-A100 hardware confirmed.",
+      "[SUCCESS] Diagnostics passed with 0 warnings & 0 critical telemetry errors!"
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      currentStep++;
+      setVerifyProgress(Math.min(100, Math.floor((currentStep / logsList.length) * 100)));
+      const newLn = logsList[currentStep - 1];
+      if (newLn) {
+        setVerifyLogs(prev => [...prev, newLn]);
+        addAgentLog?.(newLn, newLn.includes('[SUCCESS]') ? 'success' : 'info');
+      }
+
+      if (currentStep >= logsList.length) {
+        clearInterval(interval);
+        addAgentLog?.("Cluster integrity check verified. Standby state nominal.", "success");
+      }
+    }, 400);
+  };
+
   // Split View Implementation
   const renderMainContent = () => {
     if (hybridSplit && (viewMode === 'code' || viewMode === 'spatial')) {
@@ -223,7 +302,7 @@ export default function Shell() {
                 <div style={{
                    position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 100,
                    background: COLORS.surface, border: `1px solid ${COLORS.borderBright}`,
-                   borderRadius: 8, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: 180
+                   borderRadius: 8, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: 225
                 }}>
                    <div 
                       onClick={() => {
@@ -241,12 +320,33 @@ export default function Shell() {
                           addAgentLog("Deployment complete. Released spatial-release.json", "success");
                         }, 1000);
                       }}
-                      style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: COLORS.text, cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: COLORS.text, cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}
                       onMouseEnter={e => e.currentTarget.style.background = COLORS.surfaceHover}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                    >
-                      Release Bundle
-                   </div>
+                      <span style={{ color: COLORS.text }}>Release Bundle</span>
+                      <span style={{ fontSize: 9, color: COLORS.textFaint, fontWeight: 'normal' }}>Download offline platform package</span>
+                    </div>
+
+                    <div 
+                       onClick={handleVerifyCluster}
+                       style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: COLORS.text, cursor: 'pointer', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', flexDirection: 'column', gap: 2 }}
+                       onMouseEnter={e => e.currentTarget.style.background = COLORS.surfaceHover}
+                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                       <span style={{ color: COLORS.accent }}>Verify Cluster</span>
+                       <span style={{ fontSize: 9, color: COLORS.textFaint, fontWeight: 'normal' }}>Run core network and WASI validation</span>
+                    </div>
+
+                    <div 
+                       onClick={handleDeployCloudRun}
+                       style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: COLORS.text, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}
+                       onMouseEnter={e => e.currentTarget.style.background = COLORS.surfaceHover}
+                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                       <span style={{ color: '#10b981' }}>Deploy to Cloud Run</span>
+                       <span style={{ fontSize: 9, color: COLORS.textFaint, fontWeight: 'normal' }}>Spin up container instance on GCP</span>
+                    </div>
                 </div>
              )}
           </div>
@@ -305,6 +405,187 @@ export default function Shell() {
           </div>
         )}
       </div>
+
+      {/* CLOUD RUN SIMULATION MODAL OVERLAY */}
+      {isDeployingCloudRun && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24
+        }}>
+          <div style={{
+            background: "#080a0f", border: `1px solid #1b212c`,
+            borderRadius: 16, maxWidth: 540, width: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)"
+          }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#10b981", fontSize: 9, fontWeight: 900, textTransform: "uppercase", padding: "2px 8px", borderRadius: 4, fontFamily: "monospace" }}>GCP Instance</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "0.05em" }}>CLOUD RUN ENGINE PIPELINE</span>
+              </div>
+              <button 
+                onClick={() => setIsDeployingCloudRun(false)} 
+                disabled={cloudRunProgress < 100}
+                style={{
+                  background: "transparent", border: "none", color: COLORS.textFaint, cursor: cloudRunProgress < 100 ? "not-allowed" : "pointer",
+                  fontSize: 14, opacity: cloudRunProgress < 100 ? 0.3 : 1
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", fontFamily: "monospace" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontSize: 11, color: cloudRunProgress < 100 ? "#10b981" : "#fff", fontWeight: "bold" }}>
+                    {cloudRunProgress < 100 ? "COMPILING & DEPLOYING MODULE..." : "DEPLOYMENT COMPLETE"}
+                  </span>
+                  <span style={{ fontSize: 9, color: COLORS.textFaint, textTransform: "uppercase" }}>Target Instance URL Allocation</span>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: "bold", color: "#10b981" }}>{cloudRunProgress}%</span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ height: 8, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)", padding: 1, background: "#06070a" }}>
+                <div style={{
+                  height: "100%", background: "linear-gradient(90deg, #10b981, #00b8ff)", borderRadius: 10,
+                  width: `${cloudRunProgress}%`, transition: "width 0.2s ease-out"
+                }} />
+              </div>
+
+              {/* Live stdout feedback */}
+              <div style={{
+                background: "#030407", border: `1px solid ${COLORS.border}`, borderRadius: 10, height: 180, padding: 16,
+                overflowY: "auto", fontFamily: "monospace", fontSize: 10, lineHeight: 1.6, color: COLORS.textDim, display: "flex", flexDirection: "column", gap: 4
+              }}>
+                {cloudRunLogs.map((ln, idx) => (
+                  <div key={idx} style={{ 
+                    color: ln.includes('[SUCCESS]') ? '#10b981' : ln.includes('[ERROR]') ? '#ef4444' : COLORS.textDim,
+                    display: "flex", gap: 8
+                  }}>
+                    <span style={{ color: "rgba(255,255,255,0.2)" }}>[{idx + 1}]</span>
+                    <span>{ln}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: "16px 24px", background: "rgba(0,0,0,0.3)", borderTop: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "end", gap: 8 }}>
+              {cloudRunProgress < 100 ? (
+                <span style={{ fontSize: 10, color: COLORS.textFaint, fontFamily: "monospace", alignSelf: "center" }}>Waiting for Cloud Run proxy mapping...</span>
+              ) : (
+                <>
+                  <a 
+                    href="https://spatial-live-preview.run.app" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    onClick={(e) => { e.preventDefault(); addAgentLog?.("Redirecting to simulated workspace instance on secure Cloud Run shard.", "success"); }}
+                    style={{
+                      background: "#10b981", color: "#000", border: 'none', borderRadius: 8, padding: "8px 16px",
+                      fontSize: 11, fontWeight: "bold", textTransform: "uppercase", cursor: "pointer", textDecoration: "none",
+                      display: "flex", alignItems: "center", gap: 4
+                    }}
+                  >
+                    Open Live App ↗
+                  </a>
+                  <button 
+                    onClick={() => setIsDeployingCloudRun(false)}
+                    style={{
+                      background: "transparent", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 16px",
+                      fontSize: 11, fontWeight: "bold", textTransform: "uppercase", color: "#fff", cursor: "pointer"
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CLUSTER VERIFICATION MODAL OVERLAY */}
+      {isVerifyingCluster && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24
+        }}>
+          <div style={{
+            background: "#080a0f", border: `1px solid #1b212c`,
+            borderRadius: 16, maxWidth: 500, width: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
+            boxShadow: "0 20px 45px rgba(0,0,0,0.8)"
+          }}>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ background: `${COLORS.accent}15`, border: `1px solid ${COLORS.accent}33`, color: COLORS.accent, fontSize: 9, fontWeight: 900, textTransform: "uppercase", padding: "2px 8px", borderRadius: 4, fontFamily: "monospace" }}>Diagnostics</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "0.05em" }}>CLUSTER INTEGRITY</span>
+              </div>
+              <button 
+                onClick={() => setIsVerifyingCluster(false)} 
+                disabled={verifyProgress < 100}
+                style={{
+                  background: "transparent", border: "none", color: COLORS.textFaint, cursor: verifyProgress < 100 ? "not-allowed" : "pointer",
+                  fontSize: 14, opacity: verifyProgress < 100 ? 0.3 : 1
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", fontFamily: "monospace" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontSize: 11, color: COLORS.accent, fontWeight: "bold" }}>
+                    {verifyProgress < 100 ? "ANALYZING SYSTEM BINDINGS..." : "INTEGRITY SECURE"}
+                  </span>
+                  <span style={{ fontSize: 9, color: COLORS.textFaint, textTransform: "uppercase" }}>Host network packet trace and safety bounds</span>
+                </div>
+                <span style={{ fontSize: 20, fontWeight: "bold", color: COLORS.accent }}>{verifyProgress}%</span>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ height: 8, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)", padding: 1, background: "#06070a" }}>
+                <div style={{
+                  height: "100%", background: COLORS.accent, borderRadius: 10,
+                  width: `${verifyProgress}%`, transition: "width 0.2s ease-out"
+                }} />
+              </div>
+
+              {/* Live stdout feedback */}
+              <div style={{
+                background: "#030407", border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: 16, height: 160,
+                overflowY: "auto", fontFamily: "monospace", fontSize: 10, lineHeight: 1.6, color: COLORS.textDim, display: "flex", flexDirection: "column", gap: 4
+              }}>
+                {verifyLogs.map((ln, idx) => (
+                  <div key={idx} style={{ 
+                    color: ln.includes('[SUCCESS]') ? '#10b981' : ln.includes('[ERROR]') ? '#ef4444' : COLORS.textDim,
+                    display: "flex", gap: 8
+                  }}>
+                    <span style={{ color: "rgba(255,255,255,0.2)" }}>[{idx + 1}]</span>
+                    <span>{ln}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: "16px 24px", background: "rgba(0,0,0,0.3)", borderTop: `1px solid ${COLORS.border}`, display: "flex", justifyContent: "end" }}>
+              <button 
+                onClick={() => setIsVerifyingCluster(false)}
+                disabled={verifyProgress < 100}
+                style={{
+                  background: verifyProgress < 100 ? "transparent" : COLORS.accent, 
+                  color: verifyProgress < 100 ? COLORS.textFaint : "#000", 
+                  border: verifyProgress < 100 ? `1px solid ${COLORS.border}` : "none", 
+                  borderRadius: 8, padding: "8px 20px", fontSize: 11, fontWeight: "bold", textTransform: "uppercase", 
+                  cursor: verifyProgress < 100 ? "not-allowed" : "pointer"
+                }}
+              >
+                {verifyProgress < 100 ? "Verifying..." : "Acknowledge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
