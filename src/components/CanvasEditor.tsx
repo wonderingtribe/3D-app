@@ -11,19 +11,25 @@ import {
   Search,
   Image as ImageIcon,
   Box,
-  Zap
+  Zap,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
 import { WorldEntity } from '../types';
 import AIArchitect from './AIArchitect';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function CanvasEditor() {
   const { config, addAgentLog, entities, updateEntity, addEntity, deleteEntity, prefabs, addPrefab, scenes, currentSceneId, saveScene, loadScene, createScene } = useWorkspace();
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [isAIArchitectOpen, setIsAIArchitectOpen] = useState(false);
-  const [activeTool, setActiveTool] = useState<'select' | 'place'>('select');
+  const [activeTool, setActiveTool] = useState<'select' | 'place' | 'pan'>('select');
+  const [zoom, setZoom] = useState<number>(0.9);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 30, y: 30 });
+  const [isPanning, setIsPanning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Creative Overlay Modal States
@@ -38,6 +44,30 @@ export default function CanvasEditor() {
   const [promptValue, setPromptValue] = useState('');
   const [promptPlaceholder, setPromptPlaceholder] = useState('');
   const [onPromptSubmit, setOnPromptSubmit] = useState<((val: string) => void) | null>(null);
+
+  // Listen to spacebar to temporarily toggle panning
+  const [prevTool, setPrevTool] = useState<'select' | 'place' | 'pan'>('select');
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && activeTool !== 'pan' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        setPrevTool(activeTool);
+        setActiveTool('pan');
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && activeTool === 'pan') {
+        e.preventDefault();
+        setActiveTool(prevTool);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [activeTool, prevTool]);
 
   const triggerPrompt = (title: string, defaultValue: string, placeholder: string, callback: (val: string) => void) => {
     setPromptTitle(title);
@@ -54,8 +84,8 @@ export default function CanvasEditor() {
     if ((e.target as HTMLElement).closest('.cursor-move')) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - 200; // Offset for centered origin or just local coord
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left - pan.x) / zoom - 200; // Translate click with pan & zoom and origin offset
+    const y = (e.clientY - rect.top - pan.y) / zoom;
 
     setCreationCoords({ x, y });
     setCreationName(`Node_${Math.floor(Math.random() * 900 + 100)}`);
@@ -78,6 +108,66 @@ export default function CanvasEditor() {
     addAgentLog(`Placed new ${creationType} '${creationName}' at ${Math.round(creationCoords.x)}, ${Math.round(creationCoords.y)}`, 'info');
     setActiveTool('select');
     setCreationModalOpen(false);
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    const isPanAction = activeTool === 'pan' || e.button === 1 || e.button === 2;
+    if (!isPanAction) return;
+
+    e.preventDefault();
+    setIsPanning(true);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startPanX = pan.x;
+    const startPanY = pan.y;
+
+    const handlePanMouseMove = (mE: MouseEvent) => {
+      setPan({
+        x: startPanX + (mE.clientX - startX),
+        y: startPanY + (mE.clientY - startY)
+      });
+    };
+
+    const handlePanMouseUp = () => {
+      setIsPanning(false);
+      window.removeEventListener('mousemove', handlePanMouseMove);
+      window.removeEventListener('mouseup', handlePanMouseUp);
+    };
+
+    window.addEventListener('mousemove', handlePanMouseMove);
+    window.addEventListener('mouseup', handlePanMouseUp);
+  };
+
+  const handleCanvasContextMenu = (e: React.MouseEvent) => {
+    if (activeTool === 'pan' || isPanning) {
+      e.preventDefault();
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!containerRef.current) return;
+    e.preventDefault();
+
+    const zoomStep = 1.12;
+    let nextZoom = zoom;
+
+    if (e.deltaY < 0) {
+      nextZoom = Math.min(3, zoom * zoomStep);
+    } else {
+      nextZoom = Math.max(0.15, zoom / zoomStep);
+    }
+
+    if (nextZoom === zoom) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setPan(prev => ({
+      x: mouseX - (mouseX - prev.x) * (nextZoom / zoom),
+      y: mouseY - (mouseY - prev.y) * (nextZoom / zoom)
+    }));
+    setZoom(nextZoom);
   };
 
   const addNewEntity = (type: WorldEntity['type']) => {
@@ -220,7 +310,12 @@ export default function CanvasEditor() {
             <button
               key={prefab.id}
               onClick={() => instantiatePrefab(prefab)}
-              className="w-full group flex items-center gap-3 p-2 rounded-lg bg-ui-bg border border-ui-border hover:border-ui-accent/50 text-ui-text-muted hover:text-ui-text transition-all text-left"
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', prefab.id);
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className="w-full group cursor-grab active:cursor-grabbing flex items-center gap-3 p-2 rounded-lg bg-ui-bg border border-ui-border hover:border-ui-accent/50 text-ui-text-muted hover:text-ui-text transition-all text-left"
             >
               <div className="w-6 h-6 rounded bg-ui-panel flex items-center justify-center border border-ui-border group-hover:bg-ui-accent/10 transition-colors">
                 <Box className="w-3 h-3 opacity-50" />
@@ -274,19 +369,60 @@ export default function CanvasEditor() {
       <div className="flex-1 flex flex-col min-w-0 bg-ui-bg relative">
         <div className="h-12 border-b border-ui-border flex items-center px-4 justify-between bg-ui-panel/50 backdrop-blur-md z-20">
           <div className="flex items-center gap-2">
-            <div className="flex bg-ui-bg rounded-lg border border-ui-border p-1">
+            <div className="flex bg-ui-bg rounded-lg border border-ui-border p-1 gap-1">
               <ToolbarButton 
                 icon={<MousePointer2 className="w-3.5 h-3.5" />} 
                 active={activeTool === 'select'} 
                 onClick={() => setActiveTool('select')}
+                title="Select Tool"
               />
               <ToolbarButton 
                 icon={<Plus className="w-3.5 h-3.5" />} 
                 active={activeTool === 'place'}
                 onClick={() => setActiveTool('place')}
+                title="Place Tool"
+              />
+              <ToolbarButton 
+                icon={<Move className="w-3.5 h-3.5" />} 
+                active={activeTool === 'pan'}
+                onClick={() => setActiveTool('pan')}
+                title="Pan Tool (Spacebar or Right/Middle-drag)"
               />
             </div>
+            
             <div className="h-4 w-[1px] bg-ui-border mx-2" />
+            
+            {/* Zoom Controls */}
+            <div className="flex bg-ui-bg rounded-lg border border-ui-border p-1 gap-1 items-center">
+              <button 
+                onClick={() => setZoom(z => Math.max(0.2, z / 1.15))} 
+                className="p-1 hover:bg-ui-panel rounded text-ui-text-muted hover:text-ui-text transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[10px] font-mono w-10 text-center font-bold text-ui-text/80 select-none">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button 
+                onClick={() => setZoom(z => Math.min(3, z * 1.15))} 
+                className="p-1 hover:bg-ui-panel rounded text-ui-text-muted hover:text-ui-text transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-[1px] h-3 bg-ui-border mx-1" />
+              <button 
+                onClick={() => { setZoom(0.9); setPan({ x: 30, y: 30 }); }} 
+                className="p-1 hover:bg-ui-panel rounded text-ui-text-muted hover:text-ui-text transition-colors"
+                title="Recenter Workspace"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="h-4 w-[1px] bg-ui-border mx-2" />
+
             <div className="flex gap-1">
                <button onClick={() => addNewEntity('mesh')} className="p-1 px-2 border border-ui-border rounded hover:bg-ui-panel text-[9px] font-bold text-ui-text-muted">NEW_MESH</button>
                <button onClick={() => addNewEntity('light')} className="p-1 px-2 border border-ui-border rounded hover:bg-ui-panel text-[9px] font-bold text-ui-text-muted">NEW_LIGHT</button>
@@ -314,88 +450,153 @@ export default function CanvasEditor() {
         <div 
           ref={containerRef}
           className={cn(
-            "flex-1 relative overflow-hidden bg-ui-bg",
-            activeTool === 'place' && "cursor-crosshair"
+            "flex-1 relative overflow-hidden bg-ui-bg select-none",
+            activeTool === 'place' && "cursor-crosshair",
+            activeTool === 'pan' && (isPanning ? "cursor-grabbing" : "cursor-grab")
           )}
           onClick={handleCanvasClick}
-        >
-          {/* Infinite Grid Background */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{ 
-            backgroundImage: 'radial-gradient(#fff 1px, transparent 0)',
-            backgroundSize: '30px 30px'
-          }} />
+          onMouseDown={handleCanvasMouseDown}
+          onContextMenu={handleCanvasContextMenu}
+          onWheel={handleWheel}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (!containerRef.current) return;
+            const prefabId = e.dataTransfer.getData('text/plain');
+            const prefab = prefabs.find(p => p.id === prefabId);
+            if (!prefab) return;
 
-          {/* Render Nodes as draggable cards on 2D plane */}
-          {entities.map((node) => (
-            <div
-              key={node.id}
-              className={cn(
-                "absolute cursor-move transition-shadow p-3 rounded-lg border flex flex-col gap-2 min-w-[120px] shadow-lg",
-                selectedNodes.includes(node.id) 
-                  ? "bg-ui-accent/20 border-ui-accent shadow-ui-accent/20 z-10" 
-                  : "bg-ui-panel/80 border-ui-border text-ui-text-muted backdrop-blur-md"
-              )}
-              style={{
-                left: node.x + 200,
-                top: node.y,
-                transform: `scale(${selectedNodes.includes(node.id) ? 1.05 : 1})`,
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                let currentlySelected = selectedNodes;
-                if (!selectedNodes.includes(node.id)) {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey) {
-                    currentlySelected = [...selectedNodes, node.id];
-                  } else {
-                    currentlySelected = [node.id];
-                  }
-                  setSelectedNodes(currentlySelected);
-                }
-                
-                const startX = e.clientX;
-                const startY = e.clientY;
-                
-                const startPositions = currentlySelected.map(id => {
-                  const ent = entities.find(e => e.id === id);
-                  return { id, origX: ent?.x || 0, origY: ent?.y || 0 };
+            const rect = containerRef.current.getBoundingClientRect();
+            const dropX = (e.clientX - rect.left - pan.x) / zoom - 200;
+            const dropY = (e.clientY - rect.top - pan.y) / zoom;
+
+            if (prefab.type === 'group' && prefab.properties.children) {
+              prefab.properties.children.forEach((child: any) => {
+                addEntity({
+                  type: child.type,
+                  name: child.name,
+                  x: dropX + child.x,
+                  y: dropY + child.y,
+                  z: child.z,
+                  scale: child.scale,
+                  rotation: child.rotation,
+                  properties: child.properties
                 });
-                
-                const handleMouseMove = (mmE: MouseEvent) => {
-                  const dx = mmE.clientX - startX;
-                  const dy = mmE.clientY - startY;
-                  startPositions.forEach(({ id, origX, origY }) => {
-                    updateEntity(id, {
-                      x: origX + dx,
-                      y: origY + dy
-                    });
+              });
+              addAgentLog(`Dropped and instanced group prefab '${prefab.name}' on canvas`, 'success');
+            } else {
+              addEntity({
+                type: prefab.type,
+                name: `Instanced ${prefab.name}`,
+                x: dropX,
+                y: dropY,
+                z: -5,
+                scale: prefab.properties.scale || 1,
+                rotation: prefab.properties.rotation || 0,
+                properties: { ...prefab.properties },
+              });
+              addAgentLog(`Dropped and instanced prefab '${prefab.name}' on canvas`, 'success');
+            }
+          }}
+        >
+          {/* Zoomable, Pannable Viewport Wrapper */}
+          <div
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+            }}
+          >
+            {/* Infinite Grid Background */}
+            <div 
+              className="absolute inset-0 opacity-[0.03]" 
+              style={{ 
+                backgroundImage: 'radial-gradient(#fff 1px, transparent 0)',
+                backgroundSize: '30px 30px',
+                pointerEvents: 'auto',
+              }} 
+            />
+
+            {/* Render Nodes as draggable cards on 2D plane */}
+            {entities.map((node) => (
+              <div
+                key={node.id}
+                className={cn(
+                  "absolute cursor-move transition-shadow p-3 rounded-lg border flex flex-col gap-2 min-w-[120px] shadow-lg",
+                  selectedNodes.includes(node.id) 
+                    ? "bg-ui-accent/20 border-ui-accent shadow-ui-accent/20 z-10" 
+                    : "bg-ui-panel/80 border-ui-border text-ui-text-muted backdrop-blur-md"
+                )}
+                style={{
+                  left: node.x + 200,
+                  top: node.y,
+                  transform: `scale(${selectedNodes.includes(node.id) ? 1.05 : 1})`,
+                  pointerEvents: 'auto',
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  let currentlySelected = selectedNodes;
+                  if (!selectedNodes.includes(node.id)) {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                      currentlySelected = [...selectedNodes, node.id];
+                    } else {
+                      currentlySelected = [node.id];
+                    }
+                    setSelectedNodes(currentlySelected);
+                  }
+                  
+                  const startX = e.clientX;
+                  const startY = e.clientY;
+                  
+                  const startPositions = currentlySelected.map(id => {
+                    const ent = entities.find(e => e.id === id);
+                    return { id, origX: ent?.x || 0, origY: ent?.y || 0 };
                   });
-                };
-                
-                const handleMouseUp = () => {
-                  window.removeEventListener('mousemove', handleMouseMove);
-                  window.removeEventListener('mouseup', handleMouseUp);
-                };
-                
-                window.addEventListener('mousemove', handleMouseMove);
-                window.addEventListener('mouseup', handleMouseUp);
-              }}
-            >
-              <div className="flex items-center justify-between border-b border-white/5 pb-1 mb-1">
-                <span className="text-[9px] font-bold uppercase truncate pr-4">{node.name}</span>
-                <Move className="w-2.5 h-2.5 opacity-30" />
+                  
+                  const handleMouseMove = (mmE: MouseEvent) => {
+                    const dx = (mmE.clientX - startX) / zoom;
+                    const dy = (mmE.clientY - startY) / zoom;
+                    startPositions.forEach(({ id, origX, origY }) => {
+                      updateEntity(id, {
+                        x: origX + dx,
+                        y: origY + dy
+                      });
+                    });
+                  };
+                  
+                  const handleMouseUp = () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                  };
+                  
+                  window.addEventListener('mousemove', handleMouseMove);
+                  window.addEventListener('mouseup', handleMouseUp);
+                }}
+              >
+                <div className="flex items-center justify-between border-b border-white/5 pb-1 mb-1">
+                  <span className="text-[9px] font-bold uppercase truncate pr-4">{node.name}</span>
+                  <Move className="w-2.5 h-2.5 opacity-30" />
+                </div>
+                <div className="flex justify-between items-center opacity-70 border-t border-white/[0.02] pt-1 mt-1">
+                   <div className="flex flex-col gap-0.5">
+                      <span className="text-[7px] uppercase font-bold text-ui-text-muted">Coord_X</span>
+                      <span className="text-[9px] font-mono">{Math.round(node.x)}</span>
+                   </div>
+                   <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[7px] uppercase font-bold text-ui-text-muted">Coord_Y</span>
+                      <span className="text-[9px] font-mono">{Math.round(node.y)}</span>
+                   </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center opacity-70">
-                 <div className="flex flex-col gap-0.5">
-                    <span className="text-[7px] uppercase font-bold text-ui-text-muted">Coord_X</span>
-                    <span className="text-[9px] font-mono">{Math.round(node.x)}</span>
-                 </div>
-                 <div className="flex flex-col items-end gap-0.5">
-                    <span className="text-[7px] uppercase font-bold text-ui-text-muted">Coord_Y</span>
-                    <span className="text-[9px] font-mono">{Math.round(node.y)}</span>
-                 </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* AI Architect Overlay */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-30">
@@ -642,10 +843,11 @@ export default function CanvasEditor() {
   );
 }
 
-function ToolbarButton({ icon, active, onClick }: { icon: React.ReactNode; active?: boolean; onClick?: () => void }) {
+function ToolbarButton({ icon, active, onClick, title }: { icon: React.ReactNode; active?: boolean; onClick?: () => void; title?: string }) {
   return (
     <button 
       onClick={onClick}
+      title={title}
       className={cn(
         "p-1.5 rounded transition-all",
         active ? "bg-ui-accent text-white shadow-sm" : "text-ui-text-muted hover:bg-ui-accent/10 hover:text-ui-text"
