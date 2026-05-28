@@ -13,17 +13,35 @@ import {
   Filter,
   MoreVertical,
   RotateCcw,
-  Settings
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Pod, DeploymentTarget } from '../types';
 import KubernetesHistoricalChart from './KubernetesHistoricalChart';
 
 export default function KubernetesView() {
-  const { pods, refreshPods, rebootPod, activeEngineId, spinUpEnginePod } = useWorkspace();
+  const { pods, refreshPods, rebootPod, deletePod, activeEngineId, spinUpEnginePod } = useWorkspace();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNamespace, setActiveNamespace] = useState<string>("All");
   const [activeStatus, setActiveStatus] = useState<string>("All");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleTogglePod = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkReboot = () => {
+    selectedIds.forEach(id => rebootPod(id));
+    setSelectedIds([]);
+  };
+
+  const handleBulkDelete = () => {
+    selectedIds.forEach(id => deletePod(id));
+    setSelectedIds([]);
+  };
 
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [provisionProgress, setProvisionProgress] = useState(0);
@@ -480,12 +498,29 @@ export default function KubernetesView() {
 
         {/* Pod List */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
               <Activity className="w-3 h-3" />
               Active_Pods ({filteredPods.length})
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {filteredPods.length > 0 && (
+                <label className="flex items-center gap-2 px-3 py-1 bg-black/40 hover:bg-white/5 border border-white/5 rounded text-[10px] text-zinc-400 hover:text-zinc-200 font-bold uppercase tracking-wider cursor-pointer select-none transition-colors">
+                  <input 
+                    type="checkbox"
+                    checked={filteredPods.length > 0 && filteredPods.every(p => selectedIds.includes(p.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(filteredPods.map(p => p.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                    className="w-3.5 h-3.5 rounded border-[#1b1f26] bg-[#0c0d12] text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#00b8ff]"
+                  />
+                  <span>Select All</span>
+                </label>
+              )}
               <select 
                 value={activeNamespace}
                 onChange={(e) => setActiveNamespace(e.target.value)}
@@ -503,9 +538,58 @@ export default function KubernetesView() {
             </div>
           </div>
 
+          {/* Bulk Actions Bar */}
+          {selectedIds.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 px-5 bg-gradient-to-r from-blue-950/20 to-zinc-950 border border-blue-500/30 rounded-xl gap-3 animate-pulse-slow">
+              <div className="flex items-center gap-3">
+                <input 
+                  type="checkbox"
+                  checked={true}
+                  onChange={() => setSelectedIds([])}
+                  className="w-3.5 h-3.5 rounded border-blue-500 bg-[#0c0d12] text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#00b8ff]"
+                />
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[11px] font-bold text-blue-100 uppercase tracking-wide">
+                    {selectedIds.length} Resource{selectedIds.length > 1 ? 's' : ''} Selected
+                  </span>
+                  <span className="text-[8px] text-zinc-500 font-black tracking-widest uppercase">CLUSTER_BULK_CONTEXT</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handleBulkReboot}
+                  className="px-3.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-400 font-bold text-[10px] text-amber-300 uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  REBOOT SELECTED
+                </button>
+                <button 
+                  onClick={handleBulkDelete}
+                  className="px-3.5 py-1.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 hover:border-red-400 font-bold text-[10px] text-red-300 uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  DELETE SELECTED
+                </button>
+                <button 
+                  onClick={() => setSelectedIds([])}
+                  className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 font-bold text-[9px] text-zinc-400 hover:text-zinc-200 uppercase rounded-lg transition-all cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-2">
             {filteredPods.map(pod => (
-              <PodRow key={pod.id} pod={pod} onReboot={() => rebootPod(pod.id)} />
+              <PodRow 
+                key={pod.id} 
+                pod={pod} 
+                onReboot={() => rebootPod(pod.id)} 
+                onDelete={() => deletePod(pod.id)}
+                isSelected={selectedIds.includes(pod.id)}
+                onToggle={() => handleTogglePod(pod.id)}
+              />
             ))}
             {filteredPods.length === 0 && (
               <div className="p-12 text-center border border-dashed border-white/5 rounded-xl bg-white/[0.02]">
@@ -570,9 +654,39 @@ function StatCard({ icon, label, value, trend, color }: { icon: React.ReactNode,
   );
 }
 
-function PodRow({ pod, onReboot }: { pod: Pod, onReboot: () => void }) {
+function PodRow({ 
+  pod, 
+  onReboot, 
+  onDelete, 
+  isSelected, 
+  onToggle 
+}: { 
+  pod: Pod; 
+  onReboot: () => void; 
+  onDelete: () => void; 
+  isSelected: boolean; 
+  onToggle: () => void; 
+}) {
   return (
-    <div className="group bg-[#111318]/40 border border-white/5 rounded-xl p-4 flex items-center gap-6 hover:bg-[#1a1d24]/60 hover:border-blue-500/30 transition-all cursor-pointer">
+    <div 
+      onClick={onToggle}
+      className={cn(
+        "group bg-[#111318]/40 border rounded-xl p-4 flex items-center gap-6 transition-all cursor-pointer select-none",
+        isSelected 
+          ? "border-blue-500/50 bg-blue-500/[0.03] shadow-[0_0_12px_rgba(59,130,246,0.05)]" 
+          : "border-white/5 hover:bg-[#1a1d24]/60 hover:border-blue-500/30"
+      )}
+    >
+      {/* Checkbox */}
+      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+        <input 
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggle}
+          className="w-4 h-4 rounded border-[#1b1f26] bg-[#0c0d12] text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#00b8ff]"
+        />
+      </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-1">
           <div className={cn(
@@ -616,10 +730,17 @@ function PodRow({ pod, onReboot }: { pod: Pod, onReboot: () => void }) {
           >
             <RotateCcw className="w-4 h-4" />
           </button>
-          <button className="p-2 hover:bg-black/40 rounded-lg text-zinc-600 hover:text-white transition-all">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-2 hover:bg-red-500/10 rounded-lg text-zinc-600 hover:text-red-400 transition-all"
+            title="Delete Pod"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button className="p-2 hover:bg-black/40 rounded-lg text-zinc-600 hover:text-white transition-all" onClick={(e) => e.stopPropagation()}>
             <TerminalIcon className="w-4 h-4" />
           </button>
-          <button className="p-2 hover:bg-black/40 rounded-lg text-zinc-600 hover:text-white transition-all">
+          <button className="p-2 hover:bg-black/40 rounded-lg text-zinc-600 hover:text-white transition-all" onClick={(e) => e.stopPropagation()}>
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>

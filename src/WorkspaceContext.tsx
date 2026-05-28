@@ -52,6 +52,7 @@ interface WorkspaceContextType {
   completeSetup: (setup: WorkspaceSetup) => void;
   refreshPods: () => void;
   rebootPod: (id: string) => void;
+  deletePod: (id: string) => void;
   openFile: (path: string) => Promise<void>;
   closeTab: (path: string) => void;
   setActiveTabPath: (path: string) => void;
@@ -203,6 +204,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setPods(prev => prev.map(p => p.id === id ? { ...p, status: 'Running', cpu: 10, memory: 256 } : p));
       addAgentLog(`Pod successfully restarted`, 'success');
     }, 3000);
+  };
+
+  const deletePod = (id: string) => {
+    setPods(prev => {
+      const pod = prev.find(p => p.id === id);
+      if (pod) {
+        addAgentLog(`Deleting pod: ${pod.name}`, 'warning');
+      }
+      return prev.filter(p => p.id !== id);
+    });
   };
 
   const spinUpEnginePod = (
@@ -523,7 +534,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       hybridSplit, synthesisStatus, setHybridSplit, setSynthesisStatus, activeEngineId,
       setFiles, openFile, closeTab, setActiveTabPath, saveActiveFile, updateTabContent, sendTerminalCommand, addAgentLog,
       setViewMode, setSidebarOpen, setAgentSidebarOpen, setTargetUrl, updateConfig, addPipelineItem,
-      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, completeSetup, spinUpEnginePod
+      setEntities, addEntity, updateEntity, deleteEntity, addPrefab, saveScene, loadScene, createScene, refreshPods, rebootPod, deletePod, completeSetup, spinUpEnginePod
     }}>
       {children}
     </WorkspaceContext.Provider>
