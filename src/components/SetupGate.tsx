@@ -502,15 +502,37 @@ export default function SetupGate() {
                 <span className="font-mono text-[10px] text-[#64748b] font-bold tracking-wider uppercase">
                    Phase {currentIndex + 1} / 4
                 </span>
-                <button 
-                  onClick={handleNext}
-                  className="bg-[#00b8ff] hover:bg-[#33c9ff] text-black font-bold font-mono text-[11.5px] px-6 py-2.5 rounded shadow-[0_0_15px_rgba(0,184,255,0.2)] hover:-translate-y-0.5 transition-all flex items-center gap-2 group active:scale-95 cursor-pointer"
-                >
-                  {currentStep === 'synthesis' ? 'INIT_COMPILER' : 'CONTINUE_PHASE'}
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      completeSetup({
+                        engineVersion: 'v3-stable',
+                        editorMode: 'full',
+                        deploymentTarget: 'k8s-pod',
+                        hybridModules: ['wasi', 'assets', 'physics', 'mesh-opt'],
+                        sources: {
+                          engine: 'https://kernel.spatial.io',
+                          assets: 'https://cdn.assets.io',
+                          telemetry: 'wss://telemetry.cluster.local'
+                        },
+                        advancedTelemetry: true
+                      });
+                    }}
+                    className="bg-gradient-to-r from-purple-600 to-[#00b8ff] hover:from-purple-500 hover:to-[#33c9ff] text-white font-bold font-mono text-[11.5px] px-5 py-2.5 rounded shadow-[0_0_15px_rgba(147,51,234,0.35)] hover:-translate-y-0.5 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+                    title="Bypass multi-step configuration and boot the workspace with high-fidelity production defaults"
+                  >
+                    ⚡ QUICK_LAUNCH
+                  </button>
+                  <button 
+                    onClick={handleNext}
+                    className="bg-[#00b8ff] hover:bg-[#33c9ff] text-black font-bold font-mono text-[11.5px] px-6 py-2.5 rounded shadow-[0_0_15px_rgba(0,184,255,0.2)] hover:-translate-y-0.5 transition-all flex items-center gap-2 group active:scale-95 cursor-pointer"
+                  >
+                    {currentStep === 'synthesis' ? 'INIT_COMPILER' : 'CONTINUE_PHASE'}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="group-hover:translate-x-1 transition-transform">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </button>
+                </div>
               </footer>
            </div>
         </main>
