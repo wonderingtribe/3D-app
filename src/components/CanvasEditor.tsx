@@ -14,7 +14,8 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react';
 import { useWorkspace } from '../WorkspaceContext';
 import { cn } from '../lib/utils';
@@ -23,7 +24,7 @@ import AIArchitect from './AIArchitect';
 import { useState, useRef, useEffect } from 'react';
 
 export default function CanvasEditor() {
-  const { config, addAgentLog, entities, updateEntity, addEntity, deleteEntity, prefabs, addPrefab, scenes, currentSceneId, saveScene, loadScene, createScene } = useWorkspace();
+  const { config, addAgentLog, entities, updateEntity, addEntity, deleteEntity, prefabs, addPrefab, scenes, currentSceneId, saveScene, loadScene, createScene, setEntities } = useWorkspace();
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [isAIArchitectOpen, setIsAIArchitectOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'place' | 'pan'>('select');
@@ -325,6 +326,64 @@ export default function CanvasEditor() {
           ))}
         </div>
 
+        <div className="p-3 border-t border-b border-ui-border flex items-center gap-2 text-[10px] font-bold text-ui-text uppercase tracking-widest bg-ui-bg/30">
+          <Zap className="w-3.5 h-3.5 text-yellow-400" />
+          Blueprint Presets
+        </div>
+        <div className="h-44 overflow-y-auto p-2 space-y-1.5 bg-[#0e1014]/40 border-b border-ui-border">
+          <button
+            onClick={() => {
+              setEntities([
+                { id: "cb-1", type: "mesh", name: "Holo Core Sphere", x: 150, y: 150, z: 0, scale: 1.5, rotation: 45, properties: { color: "#ff00ff", emissive: true } },
+                { id: "cb-2", type: "mesh", name: "Pillar North-West", x: 60, y: 60, z: -2, scale: 0.8, rotation: 0, properties: { color: "#00ffff" } },
+                { id: "cb-3", type: "mesh", name: "Pillar South-East", x: 240, y: 240, z: -2, scale: 0.8, rotation: 0, properties: { color: "#00ffff" } },
+                { id: "cb-4", type: "light", name: "Center Cyan Spot", x: 150, y: 150, z: 12, scale: 1, rotation: 0, properties: { color: "#00e5a0", intensity: 4 } },
+                { id: "cb-5", type: "light", name: "Glow Ambient Rim", x: 150, y: 280, z: 4, scale: 1, rotation: 0, properties: { color: "#ea580c", intensity: 1.5 } }
+              ]);
+              setSelectedNodes([]);
+              addAgentLog("Synthesized 'Cyberpunk Horizon' spatial coordinates blueprint into GKE context!", "success");
+            }}
+            className="w-full text-left p-2 rounded-lg bg-ui-bg border border-ui-border hover:border-yellow-400/50 hover:bg-yellow-400/[0.02] text-ui-text-muted hover:text-ui-text transition-all flex flex-col gap-0.5 group"
+          >
+            <span className="text-[10px] font-bold text-zinc-300 group-hover:text-yellow-400 transition-colors">⚡ Cyberpunk Neon Core</span>
+            <span className="text-[8px] text-zinc-500 font-medium">Holo sphere & coordinate triggers</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEntities([
+                { id: "bm-1", type: "mesh", name: "Granite Monolith Slab", x: 150, y: 200, z: -10, scale: 2.2, rotation: 15, properties: { color: "#cbd5e1" } },
+                { id: "bm-2", type: "mesh", name: "Crossbeam Lintel", x: 150, y: 90, z: -8, scale: 1.4, rotation: -90, properties: { color: "#64748b" } },
+                { id: "bm-3", type: "light", name: "Zenith Spotlight", x: 150, y: 30, z: 20, scale: 1, rotation: 0, properties: { color: "#ffffff", intensity: 6 } },
+                { id: "bm-4", type: "light", name: "Cold Floor Reflection", x: 150, y: 250, z: -4, scale: 1, rotation: 0, properties: { color: "#38bdf8", intensity: 2.5 } }
+              ]);
+              setSelectedNodes([]);
+              addAgentLog("Synthesized 'Brutalist Light Vault' architecture blueprint into GKE context!", "success");
+            }}
+            className="w-full text-left p-2 rounded-lg bg-ui-bg border border-ui-border hover:border-yellow-400/50 hover:bg-yellow-400/[0.02] text-ui-text-muted hover:text-ui-text transition-all flex flex-col gap-0.5 group"
+          >
+            <span className="text-[10px] font-bold text-zinc-300 group-hover:text-yellow-400 transition-colors">🏛️ Brutalist Light Vault</span>
+            <span className="text-[8px] text-zinc-500 font-medium">Dramatic architectural pillars & lights</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEntities([
+                { id: "ss-1", type: "mesh", name: "Sunset Nexus Obelisk", x: 150, y: 150, z: -5, scale: 1.3, rotation: 0, properties: { color: "#f97316", emissive: true } },
+                { id: "ss-2", type: "mesh", name: "Grounded Grid Base", x: 150, y: 260, z: -15, scale: 3.5, rotation: 0, properties: { color: "#27272a" } },
+                { id: "ss-3", type: "light", name: "Chroma Solar Flare", x: 150, y: 80, z: 8, scale: 1, rotation: 0, properties: { color: "#ea580c", intensity: 3.2 } },
+                { id: "ss-4", type: "light", name: "Twilight Ambient Fill", x: 150, y: 220, z: 6, scale: 1, rotation: 0, properties: { color: "#6366f1", intensity: 2 } }
+              ]);
+              setSelectedNodes([]);
+              addAgentLog("Synthesized 'Sunset Nexus Lattice' coordinate landscape blueprint!", "success");
+            }}
+            className="w-full text-left p-2 rounded-lg bg-ui-bg border border-ui-border hover:border-yellow-400/50 hover:bg-yellow-400/[0.02] text-ui-text-muted hover:text-ui-text transition-all flex flex-col gap-0.5 group"
+          >
+            <span className="text-[10px] font-bold text-zinc-300 group-hover:text-yellow-400 transition-colors">🌅 Sunset Sky Nexus</span>
+            <span className="text-[8px] text-zinc-500 font-medium">Warm chromatic sunset solar structures</span>
+          </button>
+        </div>
+
         <div className="p-3 border-t border-b border-ui-border flex items-center justify-between text-[10px] font-bold text-ui-text uppercase tracking-widest bg-ui-bg/30">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
@@ -444,6 +503,30 @@ export default function CanvasEditor() {
             title="Save Current Scene"
           >
             <Save className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => {
+              const fileData = {
+                sceneName: scenes.find(s => s.id === currentSceneId)?.name || 'Default Scene',
+                sceneId: currentSceneId,
+                lastUpdated: new Date().toISOString(),
+                environment: config.engine,
+                entities: entities
+              };
+              const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(fileData, null, 2))}`;
+              const downloadAnchor = document.createElement('a');
+              downloadAnchor.setAttribute("href", jsonString);
+              downloadAnchor.setAttribute("download", `spatial-scene-${currentSceneId || 'export'}.json`);
+              document.body.appendChild(downloadAnchor);
+              downloadAnchor.click();
+              downloadAnchor.remove();
+              addAgentLog?.("Scene manifest successfully compiled and downloaded", "success");
+            }}
+            className="p-2 hover:bg-ui-panel border border-ui-border rounded-lg text-ui-text-muted transition-all flex items-center gap-1.5"
+            title="Download Scene JSON Manifest"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-[9px] font-bold uppercase tracking-wider pr-1 hidden sm:inline">Export JSON</span>
           </button>
         </div>
 
@@ -782,6 +865,101 @@ export default function CanvasEditor() {
                       onChange={(v) => updateEntity(node.id, { rotation: v })} 
                     />
                   </div>
+                </div>
+
+                {/* Specific Node Custom Properties */}
+                <div className="space-y-3 pt-3 border-t border-ui-border">
+                  <span className="text-[9px] font-bold text-ui-accent uppercase tracking-widest block">Material & Light Specs</span>
+                  
+                  {node.type === 'mesh' && (
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between items-center text-[9px] font-bold text-zinc-400 mb-1">
+                          <span>ALBEDO COLOR</span>
+                          <span className="text-zinc-500 uppercase font-mono text-[9px]">{node.properties?.color || "#06b6d4"}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color" 
+                            className="bg-transparent border-0 w-8 h-8 cursor-pointer p-0" 
+                            value={node.properties?.color || "#06b6d4"} 
+                            onChange={(e) => updateEntity(node.id, { 
+                              properties: { ...(node.properties || {}), color: e.target.value } 
+                            })} 
+                          />
+                          <input 
+                            type="text" 
+                            maxLength={7}
+                            className="flex-1 bg-ui-bg border border-ui-border rounded px-2 text-[10px] text-ui-text outline-none focus:border-ui-accent uppercase font-mono text-center"
+                            value={node.properties?.color || "#06b6d4"}
+                            onChange={(e) => updateEntity(node.id, { 
+                              properties: { ...(node.properties || {}), color: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between bg-white/[0.01] border border-white/5 rounded-lg p-2">
+                        <span className="text-[9px] font-bold text-zinc-400">EMISSIVE SELF-GLOW</span>
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-ui-accent focus:ring-ui-accent"
+                          checked={!!node.properties?.emissive} 
+                          onChange={(e) => updateEntity(node.id, { 
+                            properties: { ...(node.properties || {}), emissive: e.target.checked }
+                          })} 
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {node.type === 'light' && (
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between items-center text-[9px] font-bold text-zinc-400 mb-1">
+                          <span>LIGHT SPECTRUM</span>
+                          <span className="text-zinc-500 uppercase font-mono text-[9px]">{node.properties?.color || "#ffffff"}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color" 
+                            className="bg-transparent border-0 w-8 h-8 cursor-pointer p-0" 
+                            value={node.properties?.color || "#ffffff"} 
+                            onChange={(e) => updateEntity(node.id, { 
+                              properties: { ...(node.properties || {}), color: e.target.value } 
+                            })} 
+                          />
+                          <input 
+                            type="text" 
+                            maxLength={7}
+                            className="flex-1 bg-ui-bg border border-ui-border rounded px-2 text-[10px] text-ui-text outline-none focus:border-ui-accent uppercase font-mono text-center"
+                            value={node.properties?.color || "#ffffff"}
+                            onChange={(e) => updateEntity(node.id, { 
+                              properties: { ...(node.properties || {}), color: e.target.value }
+                            })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-white/[0.01] border border-white/5 rounded-lg p-3">
+                        <div className="flex justify-between items-center text-[9px] font-bold text-zinc-400 mb-1">
+                          <span>LUMINOUS INTENSITY</span>
+                          <span className="text-ui-accent font-mono text-[10px]">{(node.properties?.intensity !== undefined ? node.properties.intensity : 1.5).toFixed(1)}x</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="10" 
+                          step="0.1"
+                          className="w-full accent-ui-accent bg-zinc-800 h-1 rounded"
+                          value={node.properties?.intensity !== undefined ? node.properties.intensity : 1.5}
+                          onChange={(e) => updateEntity(node.id, { 
+                            properties: { ...(node.properties || {}), intensity: parseFloat(e.target.value) }
+                          })}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

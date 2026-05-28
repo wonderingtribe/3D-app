@@ -12,10 +12,11 @@ import {
   Search,
   Filter,
   MoreVertical,
-  RotateCcw
+  RotateCcw,
+  Settings
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { Pod } from '../types';
+import { Pod, DeploymentTarget } from '../types';
 import KubernetesHistoricalChart from './KubernetesHistoricalChart';
 
 export default function KubernetesView() {
@@ -27,10 +28,35 @@ export default function KubernetesView() {
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [provisionProgress, setProvisionProgress] = useState(0);
 
+  // Advanced 3D Engine Build Target customizability states
+  const [selectedEngine, setSelectedEngine] = useState<'unreal' | 'playcanvas' | 'unity' | 'three'>('unreal');
+  const [engineBuildTargets, setEngineBuildTargets] = useState<Record<string, DeploymentTarget>>({
+    unreal: 'k8s-pod',
+    playcanvas: 'k8s-pod',
+    unity: 'k8s-pod',
+    three: 'k8s-pod',
+  });
+  const [engineCompileOptions, setEngineCompileOptions] = useState({
+    replicas: 3,
+    baseImage: 'nvidia/cuda:12.0-base',
+    registryUrl: 'gcr.io/spatial-3d/render',
+    exposedPort: 3000,
+    mountPath: '/usr/src/app',
+    autoUpdate: true,
+    scalingMetric: 'CPU_utilization_80'
+  });
+
+  const handleUpdateEngineTarget = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three', val: DeploymentTarget) => {
+    setEngineBuildTargets(prev => ({ ...prev, [engineId]: val }));
+    setSelectedEngine(engineId);
+  };
+
   const handleProvisionEngine = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three') => {
     setProvisioningId(engineId);
     setProvisionProgress(0);
-    spinUpEnginePod(engineId);
+    
+    const target = engineBuildTargets[engineId] || 'k8s-pod';
+    spinUpEnginePod(engineId, target, engineCompileOptions);
 
     const interval = setInterval(() => {
       setProvisionProgress(p => {
@@ -118,33 +144,56 @@ export default function KubernetesView() {
 
         {/* Engine Provisioning Registry */}
         <div className="space-y-4">
-          <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-            <Network className="w-3.5 h-3.5 text-blue-400" />
-            ENGINE_PROVISIONING_REGISTRY (K8S/WASM COMPILER BLUEPRINTS)
-          </h3>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <Network className="w-3.5 h-3.5 text-blue-400" />
+              ENGINE_PROVISIONING_REGISTRY (BUILD & COMPILATION TARGETS)
+            </h3>
+            <span className="text-[9px] font-mono font-bold text-zinc-500 uppercase">Interactive 3D Orchestrator</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             
             {/* Unreal Card */}
             <div className={cn(
-              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
-              activeEngineId === 'unreal' ? 'border-[#00b8ff] shadow-[0_0_15px_rgba(0,184,255,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[230px]",
+              activeEngineId === 'unreal' ? 'border-[#00b8ff] shadow-[0_0_15px_rgba(0,184,255,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-[#00b8ff]/30'
             )}>
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-[#f5c842] uppercase tracking-widest bg-[#f5c842]/10 border border-[#f5c842]/15 px-2 py-0.5 rounded">HEAVY_GPU</span>
+                <div className="flex justify-between items-start mb-1.5">
+                  <span className="text-[9px] font-bold text-[#f5c842] uppercase tracking-widest bg-[#f5c842]/10 border border-[#f5c842]/15 px-2 py-0.5 rounded">HEAVY_GPU</span>
                   <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3000</span>
                 </div>
                 <h4 className="text-sm font-black text-white uppercase tracking-tight">Unreal Engine 5</h4>
-                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                <p className="text-[9.5px] text-zinc-500 uppercase font-mono mt-0.5 tracking-wider leading-normal">
                   Raytracing Core, Pixel Streaming container pod with multi-threaded shaders.
                 </p>
               </div>
 
-              <div className="mt-4">
+              {/* Build Target dropdown */}
+              <div className="space-y-1 bg-black/30 p-2 rounded border border-white/5 my-1.5">
+                <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
+                  <span>TARGET:</span>
+                  <select 
+                    value={engineBuildTargets['unreal'] || 'k8s-pod'}
+                    onChange={e => handleUpdateEngineTarget('unreal', e.target.value as DeploymentTarget)}
+                    disabled={activeEngineId === 'unreal' || provisioningId === 'unreal'}
+                    className="bg-[#050608] border border-white/5 rounded px-1 py-0.5 text-[8.5px] font-mono text-zinc-300 outline-none"
+                  >
+                    <option value="k8s-pod">K8S Pod</option>
+                    <option value="k8s-dev-container">K8S Dev-Container</option>
+                    <option value="k8s-deployment">K8S Deployment</option>
+                    <option value="docker-image">Docker Image</option>
+                    <option value="docker-container">Docker Container</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-1">
                 {provisioningId === 'unreal' ? (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
-                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>COMPILING LAYERS...</span>
                       <span>{provisionProgress}%</span>
                     </div>
                     <div className="h-1 bg-black/40 rounded-full overflow-hidden">
@@ -153,14 +202,14 @@ export default function KubernetesView() {
                   </div>
                 ) : activeEngineId === 'unreal' ? (
                   <div className="w-full text-center py-2 bg-[#00b8ff]/10 text-[#00b8ff] rounded-lg text-[9px] font-extrabold uppercase border border-[#00b8ff]/20">
-                    🟢 CORE_POD_ACTIVE
+                    🟢 ACTIVE_{engineBuildTargets['unreal']?.toUpperCase().replace(/-/g, '_')}
                   </div>
                 ) : (
                   <button 
                     onClick={() => handleProvisionEngine('unreal')}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#00b8ff] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
                   >
-                    SPIN UP CONTAINER
+                    DEPLOY 3D COMPILER
                   </button>
                 )}
               </div>
@@ -168,25 +217,44 @@ export default function KubernetesView() {
 
             {/* PlayCanvas Card */}
             <div className={cn(
-              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
-              activeEngineId === 'playcanvas' ? 'border-[#00e5a0] shadow-[0_0_15px_rgba(0,229,160,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[230px]",
+              activeEngineId === 'playcanvas' ? 'border-[#00e5a0] shadow-[0_0_15px_rgba(0,229,160,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-[#00e5a0]/30'
             )}>
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-[#00e5a0] uppercase tracking-widest bg-[#00e5a0]/10 border border-[#00e5a0]/15 px-2 py-0.5 rounded">WEB_STANDARD</span>
+                <div className="flex justify-between items-start mb-1.5">
+                  <span className="text-[9px] font-bold text-[#00e5a0] uppercase tracking-widest bg-[#00e5a0]/10 border border-[#00e5a0]/15 px-2 py-0.5 rounded">WEB_STANDARD</span>
                   <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3001</span>
                 </div>
                 <h4 className="text-sm font-black text-white uppercase tracking-tight">PlayCanvas Studio</h4>
-                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                <p className="text-[9.5px] text-zinc-500 uppercase font-mono mt-0.5 tracking-wider leading-normal">
                   Full-fidelity Node builder, lightweight web-based developer sandbox.
                 </p>
               </div>
 
-              <div className="mt-4">
+              {/* Build Target dropdown */}
+              <div className="space-y-1 bg-black/30 p-2 rounded border border-white/5 my-1.5">
+                <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
+                  <span>TARGET:</span>
+                  <select 
+                    value={engineBuildTargets['playcanvas'] || 'k8s-pod'}
+                    onChange={e => handleUpdateEngineTarget('playcanvas', e.target.value as DeploymentTarget)}
+                    disabled={activeEngineId === 'playcanvas' || provisioningId === 'playcanvas'}
+                    className="bg-[#050608] border border-white/5 rounded px-1 py-0.5 text-[8.5px] font-mono text-zinc-300 outline-none"
+                  >
+                    <option value="k8s-pod">K8S Pod</option>
+                    <option value="k8s-dev-container">K8S Dev-Container</option>
+                    <option value="k8s-deployment">K8S Deployment</option>
+                    <option value="docker-image">Docker Image</option>
+                    <option value="docker-container">Docker Container</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-1">
                 {provisioningId === 'playcanvas' ? (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
-                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>COMPILING LAYERS...</span>
                       <span>{provisionProgress}%</span>
                     </div>
                     <div className="h-1 bg-black/40 rounded-full overflow-hidden">
@@ -195,14 +263,14 @@ export default function KubernetesView() {
                   </div>
                 ) : activeEngineId === 'playcanvas' ? (
                   <div className="w-full text-center py-2 bg-[#00e5a0]/10 text-[#00e5a0] rounded-lg text-[9px] font-extrabold uppercase border border-[#00e5a0]/20">
-                    🟢 STUDIO_POD_ACTIVE
+                    🟢 ACTIVE_{engineBuildTargets['playcanvas']?.toUpperCase().replace(/-/g, '_')}
                   </div>
                 ) : (
                   <button 
                     onClick={() => handleProvisionEngine('playcanvas')}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#00e5a0] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
                   >
-                    SPIN UP CONTAINER
+                    DEPLOY 3D COMPILER
                   </button>
                 )}
               </div>
@@ -210,25 +278,44 @@ export default function KubernetesView() {
 
             {/* Unity Card */}
             <div className={cn(
-              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
-              activeEngineId === 'unity' ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-white/10'
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[230px]",
+              activeEngineId === 'unity' ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.15)] bg-slate-900/10' : 'border-white/5 hover:border-[#a78bfa]/30'
             )}>
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-[#a78bfa] uppercase tracking-widest bg-[#a78bfa]/10 border border-[#a78bfa]/15 px-2 py-0.5 rounded">WASM_COMPILER</span>
+                <div className="flex justify-between items-start mb-1.5">
+                  <span className="text-[9px] font-bold text-[#a78bfa] uppercase tracking-widest bg-[#a78bfa]/10 border border-[#a78bfa]/15 px-2 py-0.5 rounded">WASM_COMPILER</span>
                   <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 3002</span>
                 </div>
                 <h4 className="text-sm font-black text-white uppercase tracking-tight">Unity Reflect</h4>
-                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
+                <p className="text-[9.5px] text-zinc-500 uppercase font-mono mt-0.5 tracking-wider leading-normal">
                   Real-time C# WASM dynamic linking proxy, memory layout inspectors.
                 </p>
               </div>
 
-              <div className="mt-4">
+              {/* Build Target dropdown */}
+              <div className="space-y-1 bg-black/30 p-2 rounded border border-white/5 my-1.5">
+                <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
+                  <span>TARGET:</span>
+                  <select 
+                    value={engineBuildTargets['unity'] || 'k8s-pod'}
+                    onChange={e => handleUpdateEngineTarget('unity', e.target.value as DeploymentTarget)}
+                    disabled={activeEngineId === 'unity' || provisioningId === 'unity'}
+                    className="bg-[#050608] border border-white/5 rounded px-1 py-0.5 text-[8.5px] font-mono text-zinc-300 outline-none"
+                  >
+                    <option value="k8s-pod">K8S Pod</option>
+                    <option value="k8s-dev-container">K8S Dev-Container</option>
+                    <option value="k8s-deployment">K8S Deployment</option>
+                    <option value="docker-image">Docker Image</option>
+                    <option value="docker-container">Docker Container</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-1">
                 {provisioningId === 'unity' ? (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
-                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>COMPILING LAYERS...</span>
                       <span>{provisionProgress}%</span>
                     </div>
                     <div className="h-1 bg-black/40 rounded-full overflow-hidden">
@@ -237,14 +324,14 @@ export default function KubernetesView() {
                   </div>
                 ) : activeEngineId === 'unity' ? (
                   <div className="w-full text-center py-2 bg-[#a78bfa]/10 text-[#a78bfa] rounded-lg text-[9px] font-extrabold uppercase border border-[#a78bfa]/20">
-                    🟢 REFLECT_POD_ACTIVE
+                    🟢 ACTIVE_{engineBuildTargets['unity']?.toUpperCase().replace(/-/g, '_')}
                   </div>
                 ) : (
                   <button 
                     onClick={() => handleProvisionEngine('unity')}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-[#a78bfa] border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
                   >
-                    SPIN UP CONTAINER
+                    DEPLOY 3D COMPILER
                   </button>
                 )}
               </div>
@@ -252,25 +339,44 @@ export default function KubernetesView() {
 
             {/* General WebGL Card */}
             <div className={cn(
-              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[180px]",
-              activeEngineId === 'three' ? 'border-zinc-500 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'border-white/5 hover:border-white/10'
+              "p-4 bg-[#111318] border rounded-xl relative overflow-hidden transition-all group flex flex-col justify-between h-[230px]",
+              activeEngineId === 'three' ? 'border-zinc-500 shadow-[0_0_15px_rgba(255,255,255,0.05)] bg-[#111318]' : 'border-white/5 hover:border-zinc-500/30'
             )}>
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest bg-[#64748b]/10 border border-[#64748b]/15 px-2 py-0.5 rounded">LIGHT_EDGE</span>
+                <div className="flex justify-between items-start mb-1.5">
+                  <span className="text-[9px] font-bold text-[#64748b] uppercase tracking-widest bg-[#64748b]/10 border border-[#64748b]/15 px-2 py-0.5 rounded">LIGHT_EDGE</span>
                   <span className="text-[9px] text-[#cbd5e1] uppercase font-mono tracking-wide">PORT: 5173</span>
                 </div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight">Core WebGL Sandbox</h4>
-                <p className="text-[10px] text-zinc-500 uppercase font-mono mt-1 tracking-wider leading-relaxed">
-                  Raw WebGPU/Three.js context with vertex asset loader pipeline logs.
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">Core WebGL</h4>
+                <p className="text-[9.5px] text-zinc-500 uppercase font-mono mt-0.5 tracking-wider leading-normal">
+                  WebGL / ThreeJS render thread compiler with real-time frame buffers.
                 </p>
               </div>
 
-              <div className="mt-4">
+              {/* Build Target dropdown */}
+              <div className="space-y-1 bg-black/30 p-2 rounded border border-white/5 my-1.5">
+                <div className="flex items-center justify-between text-[8px] font-mono text-zinc-500">
+                  <span>TARGET:</span>
+                  <select 
+                    value={engineBuildTargets['three'] || 'k8s-pod'}
+                    onChange={e => handleUpdateEngineTarget('three', e.target.value as DeploymentTarget)}
+                    disabled={activeEngineId === 'three' || provisioningId === 'three'}
+                    className="bg-[#050608] border border-white/5 rounded px-1 py-0.5 text-[8.5px] font-mono text-zinc-300 outline-none"
+                  >
+                    <option value="k8s-pod">K8S Pod</option>
+                    <option value="k8s-dev-container">K8S Dev-Container</option>
+                    <option value="k8s-deployment">K8S Deployment</option>
+                    <option value="docker-image">Docker Image</option>
+                    <option value="docker-container">Docker Container</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-1">
                 {provisioningId === 'three' ? (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-[8.5px] font-bold text-zinc-500">
-                      <span>PULLING CONTAINER LAYERS...</span>
+                      <span>COMPILING LAYERS...</span>
                       <span>{provisionProgress}%</span>
                     </div>
                     <div className="h-1 bg-black/40 rounded-full overflow-hidden">
@@ -279,19 +385,96 @@ export default function KubernetesView() {
                   </div>
                 ) : activeEngineId === 'three' ? (
                   <div className="w-full text-center py-2 bg-white/10 text-white rounded-lg text-[9px] font-extrabold uppercase border border-white/20">
-                    🟢 CORE_POD_ACTIVE
+                    🟢 ACTIVE_{engineBuildTargets['three']?.toUpperCase().replace(/-/g, '_')}
                   </div>
                 ) : (
                   <button 
                     onClick={() => handleProvisionEngine('three')}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 hover:text-white border border-white/5 rounded-lg text-[9.5px] font-extrabold uppercase text-zinc-400 tracking-wider transition-all"
                   >
-                    SPIN UP CONTAINER
+                    DEPLOY 3D COMPILER
                   </button>
                 )}
               </div>
             </div>
 
+          </div>
+
+          {/* Dynamic Build Customizer Panel for all 4 Engines */}
+          <div className="p-5 bg-[#0e1115]/80 border border-white/5 rounded-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+              <h3 className="text-[10px] font-bold text-[#00b8ff] uppercase tracking-wider flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5" />
+                Build Configuration Parameters: {selectedEngine.toUpperCase()} ({engineBuildTargets[selectedEngine]?.toUpperCase().replace(/-/g, '_')})
+              </h3>
+              <span className="text-[8.5px] font-mono text-zinc-500 font-bold bg-white/5 px-2 py-0.5 rounded lowercase">interactive 3D container customization</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-zinc-400 font-mono block uppercase">Registry Repo Path / Image Tag</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-[#050608] border border-white/5 rounded-lg p-2 text-xs font-mono text-zinc-200 outline-none focus:border-blue-500/40"
+                  value={engineCompileOptions.registryUrl}
+                  onChange={e => setEngineCompileOptions(prev => ({ ...prev, registryUrl: e.target.value }))}
+                />
+                <span className="text-[8px] text-zinc-500 font-mono block">Target repository endpoint for push compilation actions</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-zinc-400 font-mono block uppercase">Docker Base Configuration Image</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-[#050608] border border-white/5 rounded-lg p-2 text-xs font-mono text-zinc-200 outline-none focus:border-blue-500/40"
+                  value={engineCompileOptions.baseImage}
+                  onChange={e => setEngineCompileOptions(prev => ({ ...prev, baseImage: e.target.value }))}
+                />
+                <span className="text-[8px] text-zinc-500 font-mono block">e.g. nvidia/cuda:12.0-base base layers</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center bg-[#050608] p-1 px-2 rounded-lg border border-white/5">
+                  <label className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Deployment Replicas</label>
+                  <span className="font-mono text-xs text-[#00b8ff] font-bold">{engineCompileOptions.replicas} INSTANCES</span>
+                </div>
+                <input 
+                  type="range" 
+                  min={1} 
+                  max={8} 
+                  step={1}
+                  value={engineCompileOptions.replicas} 
+                  onChange={e => setEngineCompileOptions(prev => ({ ...prev, replicas: Number(e.target.value) }))}
+                  className="w-full accent-[#00b8ff] bg-zinc-950 p-1 cursor-pointer rounded-lg h-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-zinc-400 font-mono block uppercase">Condition Auto-Scaling Metric</label>
+                <select 
+                  value={engineCompileOptions.scalingMetric}
+                  onChange={e => setEngineCompileOptions(prev => ({ ...prev, scalingMetric: e.target.value }))}
+                  className="w-full bg-[#050608] border border-white/5 rounded-lg p-2 text-xs font-mono text-zinc-300 outline-none focus:border-blue-500/40 cursor-pointer"
+                >
+                  <option value="CPU_utilization_80">Average CPU Utilization &gt; 80%</option>
+                  <option value="Memory_saturation_75">Memory saturation &gt; 75%</option>
+                  <option value="Network_Throughput_60">Active requests thread size &gt; 500/s</option>
+                  <option value="None">None (Static Replica Bounds)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-zinc-400 font-mono block uppercase">Host Dev Mount Volume Mapping Path</label>
+                <input 
+                  type="text" 
+                  className="w-full bg-[#050608] border border-white/5 rounded-lg p-2 text-xs font-mono text-zinc-200 outline-none focus:border-blue-500/40"
+                  value={engineCompileOptions.mountPath}
+                  onChange={e => setEngineCompileOptions(prev => ({ ...prev, mountPath: e.target.value }))}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

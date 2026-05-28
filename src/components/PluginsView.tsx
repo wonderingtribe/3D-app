@@ -130,6 +130,54 @@ const INITIAL_PLUGINS: PluginExtension[] = [
       { label: "Sampling Jitter", value: "+-2.1%" },
       { label: "Metrics Gather Rate", value: "1000ms" }
     ]
+  },
+  {
+    id: "fpv-controller",
+    name: "FPV Camera Flight Simulator",
+    category: "graphics",
+    version: "v1.2.5",
+    provider: "Spatial Standard Labs",
+    description: "Unlocks First-Person View (FPV) orbital translation, flight controls, camera physics, and custom Field of View options inside the spatial workspace sandbox.",
+    isInstalled: false,
+    isActive: false,
+    performanceOverhead: 0.45,
+    memoryCost: 0,
+    stats: [
+      { label: "Control Latency", value: "1.2ms" },
+      { label: "Default FOV", value: "85deg" }
+    ]
+  },
+  {
+    id: "npc-routing",
+    name: "AI Autonomous NPC Pathfinder",
+    category: "intelligence",
+    version: "v3.0.0",
+    provider: "Neural Mesh Labs",
+    description: "Autonomous non-player character model paths, dynamic coordinate navigation mesh (NavMesh) solver, and AI behavior patterns.",
+    isInstalled: false,
+    isActive: false,
+    performanceOverhead: 1.85,
+    memoryCost: 0,
+    stats: [
+      { label: "Route Precision", value: "99.8%" },
+      { label: "Agent Replicas", value: "Configurable" }
+    ]
+  },
+  {
+    id: "vid-to-3d-splatting",
+    name: "Real-Live Video-to-3D Splatter",
+    category: "intelligence",
+    version: "v2.4-beta",
+    provider: "Google Developer Core",
+    description: "Direct server-side video, depth buffers, and real-live video stream parsing into 3D Gaussian Splats and volumetric mesh formats inside the WebGPU pipeline.",
+    isInstalled: false,
+    isActive: false,
+    performanceOverhead: 4.25,
+    memoryCost: 0,
+    stats: [
+      { label: "Splat Count", value: "1.2M splats" },
+      { label: "Processing Speed", value: "30fps" }
+    ]
   }
 ];
 

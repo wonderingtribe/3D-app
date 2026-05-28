@@ -49,6 +49,15 @@ export default function SetupGate() {
     assets: 'https://cdn.assets.io',
     telemetry: 'wss://telemetry.cluster.local'
   });
+  const [customBuildOptions, setCustomBuildOptions] = useState({
+    replicas: 3,
+    baseImage: 'node:20-alpine',
+    registryUrl: 'gcr.io/spatial-workspace/render-core:latest',
+    exposedPort: 3000,
+    mountPath: '/usr/src/app',
+    autoUpdate: true,
+    scalingMetric: 'CPU_utilization_80'
+  });
 
   const steps: Step[] = ['orchestration', 'connectivity', 'deployment', 'synthesis'];
   const currentIndex = steps.indexOf(currentStep);
@@ -69,7 +78,8 @@ export default function SetupGate() {
         deploymentTarget: deployment,
         hybridModules,
         sources,
-        advancedTelemetry: true
+        advancedTelemetry: true,
+        customBuildOptions: customBuildOptions
       });
     }
   };
@@ -83,9 +93,6 @@ export default function SetupGate() {
 
   const selectTopologyWithAutoAdvance = (val: DeploymentTarget) => {
     setDeployment(val);
-    setTimeout(() => {
-      setCurrentStep('synthesis');
-    }, 280);
   };
 
   const handleAiSuggest = async () => {
@@ -393,48 +400,236 @@ export default function SetupGate() {
                       )}
 
                       {currentStep === 'deployment' && (
-                        <div className="space-y-5">
-                           <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em]">
-                              Deployment Topologies
+                        <div className="space-y-6">
+                           <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.2em] flex items-center justify-between">
+                              <span>Deployment Topologies</span>
+                              <span className="text-[#00b8ff] text-[9px] font-mono">Select a target to customize build variables</span>
                            </div>
 
-                           <div className="grid grid-cols-2 gap-4">
+                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                               <TopologyCard
                                 id="k8s-pod"
                                 selected={deployment === 'k8s-pod'}
                                 onClick={() => selectTopologyWithAutoAdvance('k8s-pod')}
                                 icon={<Layers size={16} />}
                                 title="Kubernetes Pods"
-                                desc="Scale across load-balanced cloud nodes instantly."
+                                desc="Deploy basic isolated cloud computing nodes."
                                 accent="green"
                               />
                               <TopologyCard
-                                id="wasm-worker"
-                                selected={deployment === ('wasm-worker' as any)}
-                                onClick={() => selectTopologyWithAutoAdvance('wasm-worker' as any)}
-                                icon={<Zap size={16} />}
-                                title="Wasm Workers"
-                                desc="Zero cold-starts executed on edge nodes globally."
+                                id="k8s-dev-container"
+                                selected={deployment === 'k8s-dev-container'}
+                                onClick={() => selectTopologyWithAutoAdvance('k8s-dev-container')}
+                                icon={<Terminal size={16} />}
+                                title="K8s Dev-Container"
+                                desc="Live sync compiler and micro-reload loops (decontainer)."
                                 accent="blue"
                               />
                               <TopologyCard
-                                id="docker-container"
-                                selected={deployment === ('docker-container' as any)}
-                                onClick={() => selectTopologyWithAutoAdvance('docker-container' as any)}
-                                icon={<Server size={16} />}
-                                title="Docker Isolated"
-                                desc="Container isolation with persistent disk metrics."
+                                id="k8s-deployment"
+                                selected={deployment === 'k8s-deployment'}
+                                onClick={() => selectTopologyWithAutoAdvance('k8s-deployment')}
+                                icon={<Network size={16} />}
+                                title="K8s Deployment"
+                                desc="Multi-replica scalable production architecture targets."
                                 accent="yellow"
                               />
                               <TopologyCard
-                                id="local-process"
-                                selected={deployment === ('local-process' as any)}
-                                onClick={() => selectTopologyWithAutoAdvance('local-process' as any)}
-                                icon={<Cloud size={16} />}
-                                title="Direct Local Host"
-                                desc="Bypasses networking boundaries using local cycle memory."
+                                id="docker-container"
+                                selected={deployment === 'docker-container'}
+                                onClick={() => selectTopologyWithAutoAdvance('docker-container')}
+                                icon={<Server size={16} />}
+                                title="Docker Isolated"
+                                desc="Port mapping, standard isolated container environment."
                                 accent="purple"
                               />
+                              <TopologyCard
+                                id="docker-image"
+                                selected={deployment === 'docker-image'}
+                                onClick={() => selectTopologyWithAutoAdvance('docker-image')}
+                                icon={<Database size={16} />}
+                                title="Docker Image Target"
+                                desc="Compile down to raw Docker registry images."
+                                accent="blue"
+                              />
+                              <TopologyCard
+                                id="local-process"
+                                selected={deployment === 'local-process'}
+                                onClick={() => selectTopologyWithAutoAdvance('local-process')}
+                                icon={<Cloud size={16} />}
+                                title="Direct Local Host"
+                                desc="High-speed local context memory boundaries."
+                                accent="purple"
+                              />
+                           </div>
+
+                           {/* Interactive Build Customization Panel */}
+                           <div className="mt-5 p-5 bg-[#0e1115]/80 border border-[#1b1f26] rounded-xl space-y-4">
+                              <div className="flex items-center justify-between border-b border-[#1b1f26] pb-3">
+                                 <h4 className="font-mono text-[10px] font-bold text-[#a78bfa] uppercase tracking-wider flex items-center gap-2">
+                                    <Settings className="w-3.5 h-3.5 text-[#00b8ff]" />
+                                    CUSTOMIZE_BUILD_CONFIG : {deployment.toUpperCase().replace(/-/g, '_')}
+                                 </h4>
+                                 <span className="font-mono text-[8.5px] bg-[#00e5a0]/10 border border-[#00e5a0]/20 text-[#00e5a0] font-bold px-2 py-0.5 rounded uppercase">Verified Target</span>
+                              </div>
+
+                              {deployment === 'k8s-pod' && (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5 col-span-2">
+                                       <div className="flex justify-between items-center text-[9px] font-mono font-black text-zinc-400">
+                                          <span>NAMESPACE SELECTION</span>
+                                          <span className="text-[#00b8ff]">K8S_NS</span>
+                                       </div>
+                                       <select 
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2.5 text-[11px] font-mono text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30 cursor-pointer"
+                                          value={customBuildOptions.scalingMetric}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, scalingMetric: e.target.value }))}
+                                       >
+                                          <option value="default">default</option>
+                                          <option value="engine">engine-sandbox</option>
+                                          <option value="infra">infra-services</option>
+                                          <option value="data">data-plane</option>
+                                       </select>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {deployment === 'k8s-dev-container' && (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block">Workspace Mount Path</label>
+                                       <input 
+                                          type="text"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          value={customBuildOptions.mountPath}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, mountPath: e.target.value }))}
+                                       />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block">Exposed Ingress Port</label>
+                                       <input 
+                                          type="number"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          value={customBuildOptions.exposedPort}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, exposedPort: Number(e.target.value) }))}
+                                       />
+                                    </div>
+
+                                    <div className="col-span-2 flex items-center justify-between p-2.5 bg-black/30 border border-[#1b1f26] rounded-lg">
+                                       <div>
+                                          <span className="text-[10px] font-bold text-[#f8fafc] block">Passive Signal Hot Module Re-linking (HMR)</span>
+                                          <span className="text-[9px] text-[#64748b] block">Instantly recompile assets directly inside context frame on save</span>
+                                       </div>
+                                       <button 
+                                          onClick={() => setCustomBuildOptions(prev => ({ ...prev, autoUpdate: !prev.autoUpdate }))}
+                                          className={cn(
+                                             "w-10 h-5.5 rounded-full p-0.5 transition-all flex items-center cursor-pointer",
+                                             customBuildOptions.autoUpdate ? "bg-[#00e5a0] justify-end" : "bg-zinc-800 justify-start"
+                                          )}
+                                       >
+                                          <div className="w-4.5 h-4.5 rounded-full bg-[#0a0b0e] shadow-md" />
+                                       </button>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {deployment === 'k8s-deployment' && (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                       <div className="flex justify-between items-center bg-zinc-950/40 p-1 px-2 rounded-lg border border-white/5">
+                                          <label className="text-[9px] font-black text-zinc-400 uppercase tracking-wider font-mono">Deployment Replicas</label>
+                                          <span className="font-mono text-xs text-[#00b8ff] font-bold">{customBuildOptions.replicas} REPLICAS</span>
+                                       </div>
+                                       <input 
+                                          type="range" 
+                                          min={1} 
+                                          max={10} 
+                                          step={1}
+                                          value={customBuildOptions.replicas} 
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, replicas: Number(e.target.value) }))}
+                                          className="w-full accent-[#00b8ff] bg-zinc-950 p-1 cursor-pointer rounded-lg h-2"
+                                       />
+                                       <div className="flex justify-between text-[8px] text-zinc-500 font-mono uppercase">
+                                          <span>Min (1)</span>
+                                          <span>Optimal (3)</span>
+                                          <span>Limit (10)</span>
+                                       </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block uppercase">Autoscaling Condition Metric</label>
+                                       <select 
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2.5 text-[11px] font-mono text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30 cursor-pointer"
+                                          value={customBuildOptions.scalingMetric}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, scalingMetric: e.target.value }))}
+                                       >
+                                          <option value="CPU_utilization_80">Average CPU Utilization &gt; 80%</option>
+                                          <option value="Memory_saturation_75">Memory saturation &gt; 75%</option>
+                                          <option value="Network_Throughput_60">Active requests thread size &gt; 500/s</option>
+                                          <option value="None">None (Static Replica Bounds)</option>
+                                       </select>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {deployment === 'docker-image' && (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block uppercase">Compilation Base Docker Image</label>
+                                       <input 
+                                          type="text"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          value={customBuildOptions.baseImage}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, baseImage: e.target.value }))}
+                                       />
+                                       <span className="text-[8px] text-zinc-500 font-bold uppercase block">RECOMMENDED: alpine, python:slim, node:alpine</span>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block uppercase">Target Docker Registry Host</label>
+                                       <input 
+                                          type="text"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          value={customBuildOptions.registryUrl}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, registryUrl: e.target.value }))}
+                                       />
+                                       <span className="text-[8px] text-zinc-500 font-bold uppercase block">RECOMMENDED: docker.io, gcr.io, ghcr.io</span>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {deployment === 'docker-container' && (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block uppercase">Host Ingress Port Binds</label>
+                                       <input 
+                                          type="number"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          value={customBuildOptions.exposedPort}
+                                          onChange={e => setCustomBuildOptions(prev => ({ ...prev, exposedPort: Number(e.target.value) }))}
+                                       />
+                                       <span className="text-[8px] text-zinc-500 font-bold uppercase block block">Binds local network port to container 3000</span>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                       <label className="font-mono text-[9px] font-black text-zinc-400 block uppercase">Docker Volume Mappings</label>
+                                       <input 
+                                          type="text"
+                                          className="w-full bg-[#06070a] border border-[#1b1f26] rounded-lg p-2 font-mono text-[11px] text-[#cbd5e1] outline-none focus:border-[#00b8ff]/30"
+                                          defaultValue="/spatial-host-data:/data"
+                                       />
+                                       <span className="text-[8px] text-zinc-500 font-bold uppercase block">Persistent storage maps inside Docker contexts</span>
+                                    </div>
+                                 </div>
+                              )}
+
+                              {deployment === 'local-process' && (
+                                 <div className="p-3 bg-zinc-950/40 border border-[#1b1f26] rounded-lg space-y-1">
+                                    <span className="text-[10px] text-zinc-200 block font-bold">🛠 DIRECT PROCESS ARCHITECTURAL CONTROL</span>
+                                    <p className="text-[9.5px] text-zinc-500 leading-relaxed uppercase font-semibold">Bypasses isolation namespaces down to bare-metal thread buffers on host process context, offering perfect 60fps latency maps using hardware context directly.</p>
+                                 </div>
+                              )}
                            </div>
                         </div>
                       )}

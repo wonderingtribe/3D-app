@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene, Pod, WorkspaceSetup } from './types';
+import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene, Pod, WorkspaceSetup, DeploymentTarget } from './types';
 import { io, Socket } from 'socket.io-client';
 
 const DEFAULT_CONFIG: WorkspaceConfig = {
@@ -46,7 +46,7 @@ interface WorkspaceContextType {
   activeEngineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon';
   setHybridSplit: (val: boolean) => void;
   setSynthesisStatus: (status: 'idle' | 'synthesizing' | 'complete') => void;
-  spinUpEnginePod: (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon') => void;
+  spinUpEnginePod: (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon', buildTarget?: DeploymentTarget, customOptions?: any) => void;
   
   setFiles: (files: FileNode[]) => void;
   completeSetup: (setup: WorkspaceSetup) => void;
@@ -205,12 +205,125 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }, 3000);
   };
 
-  const spinUpEnginePod = (engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon') => {
+  const spinUpEnginePod = (
+    engineId: 'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon',
+    buildTarget: DeploymentTarget = 'k8s-pod',
+    customOptions: any = {}
+  ) => {
     setActiveEngineId(engineId);
-    addAgentLog(`Provisioning Kubernetes pod for engine template: ${engineId.toUpperCase()}`, 'thinking');
     
-    setPods(prev => {
-      const filtered = prev.filter(p => !['p_unreal', 'p_playcanvas', 'p_unity', 'p_three', 'p_babylon'].includes(p.id));
+    const targetName = buildTarget.toUpperCase().replace(/-/g, '_');
+    addAgentLog(`Provisioning 3D Cluster Stack: ${engineId.toUpperCase()} with Target ${targetName}...`, 'thinking');
+    
+    // Clear any existing pods for this engine first
+    setPods(prev => prev.filter(p => !p.id.startsWith(`p_${engineId}`)));
+
+    // Create customized Pod or multiple replica pods
+    if (buildTarget === 'k8s-deployment') {
+      const numReplicas = customOptions?.replicas || 3;
+      addAgentLog(`Creating multi-replica K8s Deployment mapping: scaling is capped at ${numReplicas} pods`, 'info');
+      
+      const replicaPods: Pod[] = Array.from({ length: numReplicas }).map((_, idx) => ({
+        id: `p_${engineId}_replica_${idx + 1}`,
+        name: `${engineId}-deployment-replica-${idx + 1}`,
+        status: 'Pending',
+        cpu: 0,
+        memory: 0,
+        restarts: 0,
+        age: '1s',
+        node: `node-0${(idx % 3) + 1}`,
+        namespace: customOptions?.scalingMetric !== 'None' ? 'autoscale' : 'default'
+      }));
+
+      setPods(prev => [...prev, ...replicaPods]);
+
+      setTimeout(() => {
+        addAgentLog(`Applying load balancers and ingress hosts config...`, 'info');
+      }, 1000);
+
+      setTimeout(() => {
+        setPods(prev => prev.map(p => p.id.startsWith(`p_${engineId}_replica`) ? {
+          ...p,
+          status: 'Running',
+          cpu: Math.floor(Math.random() * 20) + 20,
+          memory: engineId === 'unreal' ? 1024 : 512,
+        } : p));
+        addAgentLog(`✔ Kubernetes Deployment finalized successfully: ${numReplicas} active replicas running perfectly.`, 'success');
+      }, 2500);
+
+    } else if (buildTarget === 'docker-image') {
+      addAgentLog(`Orchestrating containerized compilation sequence for Docker image...`, 'thinking');
+      const base = customOptions?.baseImage || 'node:20-alpine';
+      const reg = customOptions?.registryUrl || 'gcr.io/spatial-3d';
+      
+      const buildPod: Pod = {
+        id: `p_${engineId}_builder`,
+        name: `${engineId}-docker-image-builder`,
+        status: 'Pending',
+        cpu: 2,
+        memory: 512,
+        restarts: 0,
+        age: '1s',
+        node: 'node-02',
+        namespace: 'builds'
+      };
+
+      setPods(prev => [...prev, buildPod]);
+
+      setTimeout(() => {
+        addAgentLog(`$ docker build -f ${engineId}.Dockerfile -t ${reg}/${engineId}-render:latest --build-arg BASE_IMAGE=${base}`, 'info');
+        addAgentLog(`[Step 1/3] Copying 3D compiler headers: compiling Draco vertex streams...`, 'info');
+        setPods(prev => prev.map(p => p.id === `p_${engineId}_builder` ? { ...p, status: 'Running', cpu: 78 } : p));
+      }, 1000);
+
+      setTimeout(() => {
+        addAgentLog(`[Step 2/3] Shrinking layout binaries: Draco geometry meshopt pass...`, 'info');
+      }, 2000);
+
+      setTimeout(() => {
+        setPods(prev => prev.map(p => p.id === `p_${engineId}_builder` ? {
+          ...p,
+          status: 'Succeeded',
+          cpu: 0,
+          memory: 0,
+        } : p));
+        addAgentLog(`✔ Docker Image successfully pushed to registry mapping: ${reg}/${engineId}-render:latest`, 'success');
+      }, 3500);
+
+    } else if (buildTarget === 'k8s-dev-container') {
+      addAgentLog(`Initiating live-mount decontainer workspace binding...`, 'thinking');
+      const mPath = customOptions?.mountPath || '/usr/src/app';
+      
+      const devPod: Pod = {
+        id: `p_${engineId}_dev`,
+        name: `${engineId}-dev-decontainer-0`,
+        status: 'Pending',
+        cpu: 1,
+        memory: 256,
+        restarts: 0,
+        age: '1s',
+        node: 'node-01',
+        namespace: 'dev'
+      };
+
+      setPods(prev => [...prev, devPod]);
+
+      setTimeout(() => {
+        addAgentLog(`Mounting host volumes onto container paths: binding workspace ${mPath}...`, 'info');
+      }, 1000);
+
+      setTimeout(() => {
+        setPods(prev => prev.map(p => p.id === `p_${engineId}_dev` ? {
+          ...p,
+          status: 'Running',
+          cpu: 15,
+          memory: 512
+        } : p));
+        addAgentLog(`✔ Kubernetes decontainer online. Real-time file sync watchers established on port 3000!`, 'success');
+      }, 2500);
+
+    } else {
+      // Default / standard single pod behavior (e.g. k8s-pod or docker-container or local-process)
       const newPod: Pod = {
         id: `p_${engineId}`,
         name: engineId === 'unreal' ? 'unreal-editor-render-pod' :
@@ -223,24 +336,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         restarts: 0,
         age: '1s',
         node: ['unreal', 'babylon'].includes(engineId) ? 'node-gpu-01' : 'node-02',
-        namespace: 'engine'
+        namespace: buildTarget === 'docker-container' ? 'docker' : 'engine'
       };
-      return [...filtered, newPod];
-    });
+      setPods(prev => [...prev, newPod]);
 
-    setTimeout(() => {
-      addAgentLog(`Connecting storage claims & starting compiler stream on port 3000...`, 'info');
-    }, 1000);
+      setTimeout(() => {
+        addAgentLog(`Connecting storage claims & starting compiler stream on port 3000...`, 'info');
+      }, 1000);
 
-    setTimeout(() => {
-      setPods(prev => prev.map(p => p.id === `p_${engineId}` ? {
-        ...p,
-        status: 'Running',
-        cpu: engineId === 'unreal' ? 84 : engineId === 'playcanvas' ? 35 : engineId === 'babylon' ? 42 : engineId === 'unity' ? 55 : 20,
-        memory: engineId === 'unreal' ? 3072 : engineId === 'playcanvas' ? 1024 : engineId === 'babylon' ? 1280 : engineId === 'unity' ? 1536 : 512,
-      } : p));
-      addAgentLog(`[k8s] ${engineId.toUpperCase()} workspace container in running state! Port 3000 is open.`, 'success');
-    }, 2500);
+      setTimeout(() => {
+        setPods(prev => prev.map(p => p.id === `p_${engineId}` ? {
+          ...p,
+          status: 'Running',
+          cpu: engineId === 'unreal' ? 84 : engineId === 'playcanvas' ? 35 : engineId === 'babylon' ? 42 : engineId === 'unity' ? 55 : 20,
+          memory: engineId === 'unreal' ? 3072 : engineId === 'playcanvas' ? 1024 : engineId === 'babylon' ? 1280 : engineId === 'unity' ? 1536 : 512,
+        } : p));
+        addAgentLog(`✔ [${buildTarget.toUpperCase()}] ${engineId.toUpperCase()} workspace container in running state! Port 3000 is open.`, 'success');
+      }, 2500);
+    }
   };
 
   const addAgentLog = (message: string, type: AgentLog['type'] = 'info') => {

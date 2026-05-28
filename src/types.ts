@@ -101,4 +101,13 @@ export interface WorkspaceSetup {
   };
   customConfig?: string;
   advancedTelemetry: boolean;
+  customBuildOptions?: {
+    replicas?: number;
+    baseImage?: string;
+    registryUrl?: string;
+    exposedPort?: number;
+    mountPath?: string;
+    autoUpdate?: boolean;
+    scalingMetric?: string;
+  };
 }
