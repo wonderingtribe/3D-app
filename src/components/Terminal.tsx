@@ -12,6 +12,8 @@ import { cn } from '../lib/utils';
 export default function Terminal() {
   const { terminalLogs, sendTerminalCommand } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
+  const [height, setHeight] = useState(256);
+  const [isResizing, setIsResizing] = useState(false);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -26,11 +28,50 @@ export default function Terminal() {
     setInput("");
   };
 
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setIsOpen(true);
+
+    const startY = e.clientY;
+    const startHeight = height;
+
+    const handleMouseMove = (mmE: MouseEvent) => {
+      const dy = mmE.clientY - startY;
+      const newHeight = Math.max(100, Math.min(window.innerHeight - 120, startHeight - dy));
+      setHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
-    <div className={cn(
-      "w-full bg-ui-panel border-t border-ui-border transition-all duration-300 flex flex-col shrink-0",
-      isOpen ? "h-64" : "h-10"
-    )}>
+    <div 
+      className={cn(
+        "w-full bg-ui-panel border-t border-ui-border flex flex-col shrink-0 relative",
+        isResizing ? "select-none" : "transition-all duration-300"
+      )}
+      style={{
+        height: isOpen ? `${height}px` : "2.5rem"
+      }}
+    >
+      {/* Top resize handle */}
+      {isOpen && (
+        <div 
+          className="absolute -top-1 left-0 right-0 h-2 cursor-ns-resize z-50 hover:bg-ui-accent/35 active:bg-ui-accent/70 transition-colors"
+          onMouseDown={handleStartResize}
+          title="Drag up/down to resize process console"
+        />
+      )}
+
       {/* Navbar / Toggle */}
       <div 
         className="h-10 flex items-center justify-between px-4 cursor-pointer hover:bg-white/5 transition-colors"
