@@ -105,32 +105,7 @@ const FileNodeEntry = ({ node, depth = 0, onSelect, activeFile }: { node: FileNo
 };
 
 export default function FileExplorer() {
-  const { activeTabPath, openFile } = useWorkspace();
-  
-  const mockFiles: FileNode[] = [
-    {
-      name: 'src',
-      path: 'src',
-      type: 'directory',
-      children: [
-        { name: 'App.tsx', path: 'src/App.tsx', type: 'file' },
-        { name: 'main.tsx', path: 'src/main.tsx', type: 'file' },
-        { name: 'WorkspaceContext.tsx', path: 'src/WorkspaceContext.tsx', type: 'file' },
-        { 
-          name: 'components', 
-          path: 'src/components', 
-          type: 'directory',
-          children: [
-            { name: 'Shell.tsx', path: 'src/components/Shell.tsx', type: 'file' },
-            { name: 'CanvasEditor.tsx', path: 'src/components/CanvasEditor.tsx', type: 'file' },
-            { name: 'SpatialView.tsx', path: 'src/components/SpatialView.tsx', type: 'file' },
-          ]
-        }
-      ]
-    },
-    { name: 'package.json', path: 'package.json', type: 'file' },
-    { name: 'vite.config.ts', path: 'vite.config.ts', type: 'file' }
-  ];
+  const { activeTabPath, openFile, files } = useWorkspace();
 
   return (
     <div style={{
@@ -181,7 +156,7 @@ export default function FileExplorer() {
 
       {/* File Tree */}
       <div style={{ flex: 1, overflow: "auto", padding: "4px 0" }}>
-        {mockFiles.map((node, i) => (
+        {files.map((node, i) => (
           <FileNodeEntry key={i} node={node} onSelect={(path) => openFile(path)} activeFile={activeTabPath || undefined} />
         ))}
       </div>

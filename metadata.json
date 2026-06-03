@@ -1,6 +1,6 @@
 {
-  "name": "Spatial 3D IDE",
-  "description": "A high-fidelity spatial development environment for AI-powered scene construction, engine orchestration, and local-first 3D coding workflow.",
+  "name": "Spatial Live Sandbox",
+  "description": "A high-fidelity development workspace for real-time 3D WebGL, Three.js, and Canvas live coding and AI companion compilation.",
   "requestFramePermissions": [
     "camera",
     "microphone"

@@ -22,11 +22,11 @@ import {
 import { cn } from '../lib/utils';
 
 export default function SpatialView() {
-  const { setupConfig, addAgentLog, activeEngineId } = useWorkspace();
+  const { setupConfig, addAgentLog, activeEngineId, tabs } = useWorkspace();
   const [connections, setConnections] = useState<Record<string, 'connecting' | 'connected' | 'error'>>({
-    engine: 'connecting',
-    assets: 'connecting',
-    telemetry: 'connecting'
+    engine: 'connected',
+    assets: 'connected',
+    telemetry: 'connected'
   });
   const [metrics, setMetrics] = useState({
     fps: 0,
@@ -34,6 +34,82 @@ export default function SpatialView() {
     memory: 0,
     throughput: 0
   });
+
+  const htmlTab = tabs.find(t => t.path === 'index.html');
+  const jsTab = tabs.find(t => t.path === 'app.js');
+  const cssTab = tabs.find(t => t.path === 'styles.css');
+
+  const htmlContent = htmlTab ? htmlTab.content : '';
+  const jsContent = jsTab ? jsTab.content : '';
+  const cssContent = cssTab ? cssTab.content : '';
+
+  let mergedDoc = htmlContent || `<!DOCTYPE html><html><head></head><body><div id="canvas-container"></div></body></html>`;
+
+  const consoleInterceptor = `
+  <script>
+    (function() {
+      const oldLog = console.log;
+      const oldError = console.error;
+      const oldWarn = console.warn;
+      
+      function sendToHost(type, args) {
+        window.parent.postMessage({
+          source: 'live-sandbox-iframe',
+          type: type,
+          message: Array.from(args).map(arg => {
+            try {
+              return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+            } catch(e) {
+              return String(arg);
+            }
+          }).join(' ')
+        }, '*');
+      }
+
+      console.log = function() {
+        sendToHost('info', arguments);
+        oldLog.apply(console, arguments);
+      };
+      console.error = function() {
+        sendToHost('error', arguments);
+        oldError.apply(console, arguments);
+      };
+      console.warn = function() {
+        sendToHost('warn', arguments);
+        oldWarn.apply(console, arguments);
+      };
+      
+      window.onerror = function(message, source, lineno, colno, error) {
+        sendToHost('error', ["Line " + lineno + ":" + colno + " - " + message]);
+        return false;
+      };
+    })();
+  </script>
+  `;
+
+  if (mergedDoc.includes('<head>')) {
+    mergedDoc = mergedDoc.replace('<head>', '<head>' + consoleInterceptor);
+  } else {
+    mergedDoc = consoleInterceptor + mergedDoc;
+  }
+
+  const styleBlock = `<style>${cssContent}</style>`;
+  if (mergedDoc.includes('<link rel="stylesheet" href="styles.css">')) {
+    mergedDoc = mergedDoc.replace('<link rel="stylesheet" href="styles.css">', styleBlock);
+  } else if (mergedDoc.includes('</head>')) {
+    mergedDoc = mergedDoc.replace('</head>', styleBlock + '</head>');
+  } else {
+    mergedDoc += styleBlock;
+  }
+
+  const scriptBlock = `<script>${jsContent}</script>`;
+  if (mergedDoc.includes('<script src="app.js"></script>')) {
+    mergedDoc = mergedDoc.replace('<script src="app.js"></script>', scriptBlock);
+  } else if (mergedDoc.includes('</body>')) {
+    mergedDoc = mergedDoc.replace('</body>', scriptBlock + '</body>');
+  } else {
+    mergedDoc += scriptBlock;
+  }
 
   // Unreal States
   const [lumenQuality, setLumenQuality] = useState(1.5);
@@ -53,6 +129,24 @@ export default function SpatialView() {
   const [rotateSpeed, setRotateSpeed] = useState(2.0);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.source === 'live-sandbox-iframe') {
+        const type = e.data.type;
+        const message = e.data.message;
+        if (type === 'error') {
+          addAgentLog(`[Compiler Output Error] ${message}`, 'error');
+        } else if (type === 'warn') {
+          addAgentLog(`[Compiler Alert] ${message}`, 'warning');
+        } else {
+          addAgentLog(`[Runner Log] ${message}`, 'info');
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [addAgentLog]);
 
   useEffect(() => {
     // Simulate connection handshake
@@ -518,25 +612,14 @@ Rotate.prototype.update = function (dt) {
                 </div>
               </div>
             </div>
-          ) : setupConfig?.sources.engine ? (
+          ) : (
             <iframe 
               ref={iframeRef}
-              src={setupConfig.sources.engine}
-              className="w-full h-full border-none"
+              srcDoc={mergedDoc}
+              className="w-full h-full border-none bg-[#050608]"
               title="Spatial Engine Runtime"
               sandbox="allow-scripts allow-same-origin"
             />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-               <div className="w-20 h-20 rounded-[2.5rem] bg-blue-500/10 flex items-center justify-center mb-6">
-                  <Box className="w-10 h-10 text-blue-500 opacity-50" />
-               </div>
-               <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Awaiting Engine Link</h3>
-               <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest max-w-sm leading-relaxed">
-                  No spatial runtime address provided. Synthesis plane is in standby mode. 
-                  Please configure a valid kernel source in connectivity settings.
-               </p>
-            </div>
           )}
 
           <div className="absolute top-12 left-6 flex flex-col gap-3 pointer-events-none z-10">

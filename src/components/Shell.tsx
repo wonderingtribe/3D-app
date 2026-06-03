@@ -41,18 +41,10 @@ const COLORS = {
 };
 
 const NAV_TABS = [
-  { id: "pod-studio", label: "📦 3D Pod Studio" },
-  { id: "assistant", label: "AI Intelligence" },
-  { id: "integrity", label: "🛡️ Integrity & Backups" },
-  { id: "infrastructure", label: "Clusters & Pods" },
-  { id: "design", label: "UI Design" },
-  { id: "engine", label: "Engine Setup" },
-  { id: "spatial", label: "Spatial View" },
-  { id: "code", label: "Source Code" },
-  { id: "pipeline", label: "Asset Pipeline" },
-  { id: "plugins", label: "Plugins & Exts" },
-  { id: "settings", label: "Settings" },
-  { id: "billing", label: "💳 Billing & Plans" },
+  { id: "code", label: "🖥️ Live Sandbox" },
+  { id: "spatial", label: "📐 Full View" },
+  { id: "assistant", label: "💬 AI Copilot" },
+  { id: "settings", label: "🎛️ Settings" },
 ];
 
 export default function Shell() {
@@ -376,9 +368,8 @@ export default function Shell() {
           width: 48, background: COLORS.surface, borderRight: `1px solid ${COLORS.border}`,
           display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", gap: 8, flexShrink: 0,
         }}>
-          <ActivityButton id="explorer" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>} active={isSidebarOpen} onClick={() => setSidebarOpen(!isSidebarOpen)} />
-          <ActivityButton id="infra" icon={<Box size={20} />} active={viewMode === 'infrastructure'} onClick={() => setViewMode('infrastructure')} />
-          <ActivityButton id="ai" icon={<Sparkles size={20} />} active={viewMode === 'assistant'} onClick={() => setViewMode('assistant')} />
+          <ActivityButton id="explorer" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" color={isSidebarOpen ? COLORS.accent : COLORS.textFaint}><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>} active={isSidebarOpen} onClick={() => setSidebarOpen(!isSidebarOpen)} />
+          <ActivityButton id="ai" icon={<Sparkles size={20} color={viewMode === 'assistant' ? COLORS.accent : COLORS.textFaint} />} active={viewMode === 'assistant'} onClick={() => setViewMode('assistant')} />
         </div>
 
         {/* FILE EXPLORER PANEL */}

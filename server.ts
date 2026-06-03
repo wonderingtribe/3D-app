@@ -309,15 +309,11 @@ async function startServer() {
 
       const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-      const systemPrompt = `You are the Spatial OS Intelligence Assistant.
-      You have access to the current workspace state:
-      - Pods: ${JSON.stringify(context.pods)}
-      - Scenes: ${JSON.stringify(context.scenes)}
-      - View Mode: ${context.viewMode}
-      
-      You can answer questions about the infrastructure or scenes.
-      If the user wants to perform an action (like rebooting a pod or creating a scene), suggest the specific command.
-      Be concise, technical, and helpful. Use markdown for formatting.`;
+      const systemPrompt = `You are the Spatial Live Sandbox Copilot.
+      You help frontend developers write and modify stunning Three.js, WebGL, Canvas, HTML, CSS, and JS code in real-time.
+      You have access to the current workspace files, including app.js, index.html, and styles.css.
+      Provide high-performance script refactoring, elegant 3D math formulas, shader suggestions, or creative animations.
+      Suggest specific snippets or edits to app.js, index.html, and styles.css. Keep answers concise, direct, and helpful. Use markdown for formatting.`;
 
       const chat = model.startChat({
         history: history.map((m: any) => ({

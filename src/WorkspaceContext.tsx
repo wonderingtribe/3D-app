@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { FileNode, Tab, ViewMode, AgentLog, WorkspaceConfig, PipelineItem, WorldEntity, Prefab, Scene, Pod, WorkspaceSetup, DeploymentTarget, WorkspaceError, CheckpointStep, CustomEngineConfig } from './types';
 import { io, Socket } from 'socket.io-client';
+import { SANDBOX_DEFAULTS } from './sandbox_defaults';
 
 const DEFAULT_CONFIG: WorkspaceConfig = {
   theme: "minimal",
@@ -94,14 +95,26 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [files, setFiles] = useState<FileNode[]>([]);
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
+  const [files, setFiles] = useState<FileNode[]>([
+    { name: 'app.js', path: 'app.js', type: 'file' },
+    { name: 'index.html', path: 'index.html', type: 'file' },
+    { name: 'styles.css', path: 'styles.css', type: 'file' },
+    { name: 'readme.md', path: 'readme.md', type: 'file' }
+  ]);
+  const [tabs, setTabs] = useState<Tab[]>(() => {
+    const defaultApp = localStorage.getItem('sandbox_app.js') || SANDBOX_DEFAULTS['app.js'];
+    const defaultHtml = localStorage.getItem('sandbox_index.html') || SANDBOX_DEFAULTS['index.html'];
+    return [
+      { path: 'app.js', name: 'app.js', content: defaultApp },
+      { path: 'index.html', name: 'index.html', content: defaultHtml }
+    ];
+  });
+  const [activeTabPath, setActiveTabPath] = useState<string | null>('app.js');
   const [terminalLogs, setTerminalLogs] = useState<string[]>(["Spatial Shell v1.0.4", "Connected to engine context..."]);
   const [agentLogs, setAgentLogs] = useState<AgentLog[]>([
     { id: '1', message: 'Canvas ready for spatial reconstruction', type: 'info', timestamp: Date.now() }
   ]);
-  const [viewMode, setViewMode] = useState<ViewMode>('pod-studio');
+  const [viewMode, setViewMode] = useState<ViewMode>('code');
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAgentSidebarOpen, setAgentSidebarOpen] = useState(false);
   const [isAgentThinking, setIsAgentThinking] = useState(false);
@@ -127,10 +140,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     ], timestamp: Date.now() }
   ]);
   const [currentSceneId, setCurrentSceneId] = useState<string | null>('s1');
-  const [isSetupComplete, setIsSetupComplete] = useState(false);
-  const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>(null);
-  const [hybridSplit, setHybridSplit] = useState(false);
-  const [synthesisStatus, setSynthesisStatus] = useState<'idle' | 'synthesizing' | 'complete'>('idle');
+  const [isSetupComplete, setIsSetupComplete] = useState(true);
+  const [setupConfig, setSetupConfig] = useState<WorkspaceSetup | null>({
+    engineVersion: 'hybrid-custom',
+    editorMode: 'full',
+    deploymentTarget: 'local-process',
+    hybridModules: ['threejs', 'canvas2d'],
+    sources: {
+      engine: 'live-sandbox-virtual',
+    },
+    advancedTelemetry: false,
+  });
+  const [hybridSplit, setHybridSplit] = useState(true);
+  const [synthesisStatus, setSynthesisStatus] = useState<'idle' | 'synthesizing' | 'complete'>('complete');
   const [activeEngineId, setActiveEngineId] = useState<'unreal' | 'playcanvas' | 'unity' | 'three' | 'babylon' | 'custom'>('three');
 
   const [customEngineConfig, setCustomEngineConfig] = useState<CustomEngineConfig>(() => {
@@ -534,14 +556,20 @@ function onUpdate(time, activeMesh, scene) {
     }
     const nodes = path.split('/');
     const name = nodes[nodes.length - 1];
-    setTabs(prev => [...prev, { path, name, content: '// Content for ' + path }]);
+    
+    const savedContent = localStorage.getItem('sandbox_' + path) || 
+                         SANDBOX_DEFAULTS[path as keyof typeof SANDBOX_DEFAULTS] || 
+                         `// Spatial Sandbox: ${path}\n\n`;
+                         
+    setTabs(prev => [...prev, { path, name, content: savedContent }]);
     setActiveTabPath(path);
   };
 
   const closeTab = (path: string) => {
     setTabs(prev => prev.filter(t => t.path !== path));
     if (activeTabPath === path) {
-      setActiveTabPath(tabs[tabs.length - 2]?.path || null);
+      const remaining = tabs.filter(t => t.path !== path);
+      setActiveTabPath(remaining[remaining.length - 1]?.path || null);
     }
   };
 
@@ -551,9 +579,20 @@ function onUpdate(time, activeMesh, scene) {
 
   const saveActiveFile = async () => {
     if (!activeTabPath) return;
+    const tabToSave = tabs.find(t => t.path === activeTabPath);
+    if (!tabToSave) return;
+
     setTabs(prev => prev.map(t => t.path === activeTabPath ? { ...t, isDirty: false } : t));
-    addAgentLog(`Saved changes to ${activeTabPath}`, 'success');
-    createCheckpoint(`File saved: ${activeTabPath}`);
+    
+    localStorage.setItem('sandbox_' + activeTabPath, tabToSave.content);
+    
+    addAgentLog(`File saved: ${activeTabPath} successfully. Hot reload compiled.`, 'success');
+    setTerminalLogs(prev => [...prev, `[compiler] hot module update compiled: ${activeTabPath}`]);
+    
+    const compileEvent = new CustomEvent('sandbox-recompile', { 
+      detail: { path: activeTabPath, content: tabToSave.content } 
+    });
+    window.dispatchEvent(compileEvent);
   };
 
   const sendTerminalCommand = (cmd: string) => {
