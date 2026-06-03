@@ -14,6 +14,8 @@ import KubernetesView from './KubernetesView';
 import AIAssistant from './AIAssistant';
 import PluginsView from './PluginsView';
 import PodStudio from './PodStudio';
+import BillingView from './BillingView';
+import IntegrityDashboard from './IntegrityDashboard';
 import { ChevronDown, BrainCircuit, Box, Sparkles, Layers } from 'lucide-react';
 
 const COLORS = {
@@ -41,6 +43,7 @@ const COLORS = {
 const NAV_TABS = [
   { id: "pod-studio", label: "📦 3D Pod Studio" },
   { id: "assistant", label: "AI Intelligence" },
+  { id: "integrity", label: "🛡️ Integrity & Backups" },
   { id: "infrastructure", label: "Clusters & Pods" },
   { id: "design", label: "UI Design" },
   { id: "engine", label: "Engine Setup" },
@@ -49,6 +52,7 @@ const NAV_TABS = [
   { id: "pipeline", label: "Asset Pipeline" },
   { id: "plugins", label: "Plugins & Exts" },
   { id: "settings", label: "Settings" },
+  { id: "billing", label: "💳 Billing & Plans" },
 ];
 
 export default function Shell() {
@@ -81,7 +85,7 @@ export default function Shell() {
     setIsDeployingCloudRun(true);
     setCloudRunProgress(0);
     setCloudRunLogs(["[INFO] Accessing Cloud Artifact Registry permissions..."]);
-    addAgentLog?.("Initiating Google Cloud Run container deployment...", "thinking");
+    addAgentLog?.("Initiating automated cluster container deployment...", "thinking");
 
     const logsList = [
       "[INFO] Bundling application source artifacts & assets buffers...",
@@ -89,9 +93,9 @@ export default function Shell() {
       "[SUCCESS] Production build compiled (dist/ index & server assets).",
       "[DOCKER] Packaging container image under tag: gcr.io/wonder-space-3d/preview-run:v2",
       "[DOCKER] Pushing container blocks to cache context... [64.2 MB]",
-      "[SUCCESS] Artifact uploaded securely to Google Cloud Container registry.",
-      "[GCP] Accessing Cloud Run instance APIs: region=us-central1 (low-latency-tier)",
-      "[GCP] Provisioning virtual VM instance... Allocated virtual vCPUs=2, RAM=4GB",
+      "[SUCCESS] Artifact uploaded securely to our Docker Container registry.",
+      "[VM-MAN] Accessing virtual computer instance APIs: region=us-west-1 (isolated-low-latency)",
+      "[VM] Provisioning container server-node... vCPUs=2, RAM=4GB, Dedicated compute queue initialized",
       "[NET] Mapping incoming listener container entry directly to Port 3000...",
       "[SUCCESS] Deep Deployment complete! Live run route: https://spatial-live-preview.run.app"
     ];
@@ -108,7 +112,7 @@ export default function Shell() {
 
       if (currentStep >= logsList.length) {
         clearInterval(interval);
-        addAgentLog?.("Google Cloud Run deployment complete! Container online.", "success");
+        addAgentLog?.("Cloud container deployment complete! Services online.", "success");
       }
     }, 450);
   };
@@ -172,6 +176,8 @@ export default function Shell() {
       case 'infrastructure': return <KubernetesView />;
       case 'assistant': return <AIAssistant />;
       case 'plugins': return <PluginsView />;
+      case 'billing': return <BillingView />;
+      case 'integrity': return <IntegrityDashboard />;
       default: return <SpatialView />;
     }
   };
@@ -344,8 +350,8 @@ export default function Shell() {
                        onMouseEnter={e => e.currentTarget.style.background = COLORS.surfaceHover}
                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                       <span style={{ color: '#10b981' }}>Deploy to Cloud Run</span>
-                       <span style={{ fontSize: 9, color: COLORS.textFaint, fontWeight: 'normal' }}>Spin up container instance on GCP</span>
+                       <span style={{ color: '#10b981' }}>Deploy to Workspace Cloud</span>
+                       <span style={{ fontSize: 9, color: COLORS.textFaint, fontWeight: 'normal' }}>Spin up high-performance compute container node</span>
                     </div>
                 </div>
              )}
@@ -419,8 +425,8 @@ export default function Shell() {
           }}>
             <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#10b981", fontSize: 9, fontWeight: 900, textTransform: "uppercase", padding: "2px 8px", borderRadius: 4, fontFamily: "monospace" }}>GCP Instance</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "0.05em" }}>CLOUD RUN ENGINE PIPELINE</span>
+                <span style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", color: "#10b981", fontSize: 9, fontWeight: 900, textTransform: "uppercase", padding: "2px 8px", borderRadius: 4, fontFamily: "monospace" }}>Cloud Runtime</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "0.05em" }}>WORKSPACE DEPLOYMENT PIPELINE</span>
               </div>
               <button 
                 onClick={() => setIsDeployingCloudRun(false)} 

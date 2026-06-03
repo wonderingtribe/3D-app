@@ -29,12 +29,12 @@ interface Message {
 }
 
 export default function AIAssistant() {
-  const { addAgentLog, pods, scenes, viewMode, rebootPod } = useWorkspace();
+  const { addAgentLog, pods, scenes, viewMode, rebootPod, config } = useWorkspace();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hello. I am the Spatial Intelligence Assistant. I can help you orchestrate pods, generate scene components, or refactor your scripts. What is our objective today?",
+      content: "Hello. I am the Spatial Copilot. I can help you orchestrate pods, generate scene components, or refactor your scripts. What is our objective today?",
       timestamp: Date.now()
     }
   ]);
@@ -61,7 +61,7 @@ export default function AIAssistant() {
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
-    addAgentLog(`Dispatching directive to Spatial LLM`, 'thinking');
+    addAgentLog(`Routing request to AI compilation context...`, 'thinking');
 
     try {
       const response = await fetch('/api/assistant/chat', {
@@ -127,8 +127,8 @@ export default function AIAssistant() {
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-4 border-[#0a0b0e]" />
           </div>
           <div>
-            <h2 className="text-[14px] font-extrabold text-white uppercase tracking-[0.2em] leading-tight">Spatial_Intelligence</h2>
-            <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5">Model: Gemini 1.5 Pro • Status: Online</p>
+            <h2 className="text-[14px] font-extrabold text-white uppercase tracking-[0.2em] leading-tight">Spatial_Copilot</h2>
+            <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5">Kernel: {config.aiProvider === 'gemini-pro' ? 'Gemini 1.5 Pro' : config.aiProvider === 'opencode-ai' ? 'OpenCode AI (Pro)' : 'Spatial-AI-v9'} • State: Optimal</p>
           </div>
         </div>
 

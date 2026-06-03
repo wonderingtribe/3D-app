@@ -2,6 +2,7 @@ import React from 'react';
 import { WorkspaceProvider, useWorkspace } from './WorkspaceContext';
 import Shell from './components/Shell';
 import SetupGate from './components/SetupGate';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function WorkspaceLayout() {
   const { isSetupComplete } = useWorkspace();
@@ -11,9 +12,11 @@ function WorkspaceLayout() {
 
 function App() {
   return (
-    <WorkspaceProvider>
-      <WorkspaceLayout />
-    </WorkspaceProvider>
+    <ErrorBoundary>
+      <WorkspaceProvider>
+        <WorkspaceLayout />
+      </WorkspaceProvider>
+    </ErrorBoundary>
   );
 }
 

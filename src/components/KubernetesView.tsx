@@ -14,11 +14,15 @@ import {
   MoreVertical,
   RotateCcw,
   Settings,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  X
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Pod, DeploymentTarget } from '../types';
 import KubernetesHistoricalChart from './KubernetesHistoricalChart';
+import AetherShieldIPS from './AetherShieldIPS';
 
 export default function KubernetesView() {
   const { pods, refreshPods, rebootPod, deletePod, activeEngineId, spinUpEnginePod } = useWorkspace();
@@ -26,6 +30,17 @@ export default function KubernetesView() {
   const [activeNamespace, setActiveNamespace] = useState<string>("All");
   const [activeStatus, setActiveStatus] = useState<string>("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'reboot' | 'terminate' | null;
+  }>({
+    isOpen: false,
+    type: null
+  });
+
+  const selectedPods = useMemo(() => {
+    return pods.filter(p => selectedIds.includes(p.id));
+  }, [pods, selectedIds]);
 
   const handleTogglePod = (id: string) => {
     setSelectedIds(prev => 
@@ -33,14 +48,14 @@ export default function KubernetesView() {
     );
   };
 
-  const handleBulkReboot = () => {
-    selectedIds.forEach(id => rebootPod(id));
+  const handleConfirmAction = () => {
+    if (confirmModal.type === 'reboot') {
+      selectedIds.forEach(id => rebootPod(id));
+    } else if (confirmModal.type === 'terminate') {
+      selectedIds.forEach(id => deletePod(id));
+    }
     setSelectedIds([]);
-  };
-
-  const handleBulkDelete = () => {
-    selectedIds.forEach(id => deletePod(id));
-    setSelectedIds([]);
+    setConfirmModal({ isOpen: false, type: null });
   };
 
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
@@ -114,6 +129,186 @@ export default function KubernetesView() {
 
   return (
     <div className="h-full flex flex-col bg-[#0a0b0e] overflow-hidden font-mono">
+      {/* Floating Bulk Actions Toolbar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 50, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="bulk-actions-toolbar fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-4xl px-4 sm:px-0"
+          >
+            <div className="bg-[#0e1115]/95 backdrop-blur-md border border-blue-500/30 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(59,130,246,0.15)] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 font-mono">
+                <div className="flex items-center">
+                  <input 
+                    type="checkbox"
+                    checked={filteredPods.length > 0 && filteredPods.every(p => selectedIds.includes(p.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(filteredPods.map(p => p.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-[#1b1f26] bg-[#0c0d12] text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#00b8ff]"
+                  />
+                </div>
+                <div className="flex flex-col text-left">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[12px] font-black text-white uppercase tracking-wide">
+                      {selectedIds.length} Pod{selectedIds.length > 1 ? 's' : ''} Selected
+                    </span>
+                    <span className="text-[8px] text-zinc-500 font-extrabold tracking-widest uppercase">CLUSTER_BULK_CONTEXT</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-400 uppercase font-mono mt-0.5 max-w-md hidden sm:block">
+                    Apply low-level container commands collectively to chosen deployment nodes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end font-mono">
+                <button 
+                  onClick={() => setConfirmModal({ isOpen: true, type: 'reboot' })}
+                  className="px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-400 font-bold text-[10.5px] text-amber-300 uppercase rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+                >
+                  <RotateCcw className="w-4 h-4 text-amber-300" />
+                  Bulk Reboot
+                </button>
+                <button 
+                  onClick={() => setConfirmModal({ isOpen: true, type: 'terminate' })}
+                  className="px-4 py-2 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 hover:border-red-400 font-bold text-[10.5px] text-red-300 uppercase rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+                >
+                  <Trash2 className="w-4 h-4 text-red-300" />
+                  Bulk Terminate
+                </button>
+                <div className="h-6 w-[1px] bg-white/10 mx-1 hidden sm:block" />
+                <button 
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 font-bold text-[9.5px] text-zinc-400 hover:text-zinc-200 uppercase rounded-xl transition-all cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Action Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal({ isOpen: false, type: null })}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            {/* Modal Box wrapper */}
+            <div className="flex min-h-screen items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: "spring", duration: 0.35 }}
+                className="relative bg-[#0e1115] border border-white/10 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl z-10 font-mono text-zinc-200 uppercase"
+              >
+                {/* Header with corresponding icon */}
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "p-3 rounded-xl border",
+                    confirmModal.type === 'reboot' 
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-400" 
+                      : "bg-red-500/10 border-red-500/30 text-red-500"
+                  )}>
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h3 className="text-xs font-black text-white tracking-widest uppercase leading-tight text-left">
+                      Confirm Bulk {confirmModal.type === 'reboot' ? 'Reboot' : 'Termination'}
+                    </h3>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase mt-1 text-left">
+                      Action scope: {selectedIds.length} active deployment pod{selectedIds.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setConfirmModal({ isOpen: false, type: null })}
+                    className="p-1 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Highly descriptive caution text */}
+                <div className={cn(
+                  "p-4 rounded-xl border text-[10.5px] font-medium leading-relaxed font-sans normal-case text-left",
+                  confirmModal.type === 'reboot'
+                    ? "bg-amber-500/5 border-amber-500/20 text-amber-200/90"
+                    : "bg-red-500/5 border-red-500/20 text-red-200/90"
+                )}>
+                  {confirmModal.type === 'reboot' ? (
+                    <p>
+                      <strong>Warning:</strong> You are initiating a bulk restart command on {selectedIds.length} pods. Undergoing containers will be warm-rebooted. This will reset connections, but typically has minor setup overhead.
+                    </p>
+                  ) : (
+                    <p>
+                      <strong>Critical danger:</strong> You are about to permanently terminate {selectedIds.length} pods. Workspace data and active transaction states inside these nodes will be destroyed. New container instances will be auto-spun to balance replicas.
+                    </p>
+                  )}
+                </div>
+
+                {/* Selected target pods list */}
+                <div className="space-y-2 text-left">
+                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block text-left">Affected Resources Registry:</span>
+                  <div className="bg-[#050608] border border-white/5 rounded-xl max-h-40 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar text-left font-mono">
+                    {selectedPods.map(pod => (
+                      <div key={pod.id} className="flex items-center justify-between bg-[#111318]/60 p-2 rounded-lg border border-white/5 text-left">
+                        <div className="flex items-center gap-2 text-left">
+                          <div className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            pod.status === 'Running' ? "bg-emerald-400" : "bg-amber-400"
+                          )} />
+                          <span className="text-[11px] font-black text-zinc-300 truncate max-w-[240px] text-left font-sans">{pod.name}</span>
+                        </div>
+                        <span className="text-[8.5px] font-mono text-zinc-400 uppercase bg-white/5 px-2 py-0.5 rounded border border-white/5">NS: {pod.namespace}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Operational actions bar */}
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmModal({ isOpen: false, type: null })}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 font-bold text-[10px] text-zinc-400 hover:text-zinc-200 uppercase rounded-xl transition-all cursor-pointer"
+                  >
+                    Stand Down / Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmAction}
+                    className={cn(
+                      "px-5 py-2 font-bold text-[10px] uppercase rounded-xl transition-all cursor-pointer shadow-lg",
+                      confirmModal.type === 'reboot'
+                        ? "bg-amber-500 text-black hover:bg-amber-400 border border-amber-400 font-extrabold"
+                        : "bg-red-500 text-white hover:bg-red-500 border border-red-500 font-extrabold"
+                    )}
+                  >
+                    Confirm {confirmModal.type === 'reboot' ? 'Reboot' : 'Terminate'}
+                  </button>
+                </div>
+
+              </motion.div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#111318]/50">
         <div>
@@ -147,7 +342,7 @@ export default function KubernetesView() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6 space-y-8">
+      <div className="flex-1 overflow-auto p-6 pb-28 space-y-8">
         
         {/* Cluster Stats */}
         <div className="grid grid-cols-4 gap-4">
@@ -159,6 +354,9 @@ export default function KubernetesView() {
 
         {/* D3 Historical Pod Loading Chart */}
         <KubernetesHistoricalChart pods={pods} />
+
+        {/* AetherShield Intrusion Prevention Suite */}
+        <AetherShieldIPS />
 
         {/* Engine Provisioning Registry */}
         <div className="space-y-4">
@@ -538,47 +736,7 @@ export default function KubernetesView() {
             </div>
           </div>
 
-          {/* Bulk Actions Bar */}
-          {selectedIds.length > 0 && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 px-5 bg-gradient-to-r from-blue-950/20 to-zinc-950 border border-blue-500/30 rounded-xl gap-3 animate-pulse-slow">
-              <div className="flex items-center gap-3">
-                <input 
-                  type="checkbox"
-                  checked={true}
-                  onChange={() => setSelectedIds([])}
-                  className="w-3.5 h-3.5 rounded border-blue-500 bg-[#0c0d12] text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#00b8ff]"
-                />
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[11px] font-bold text-blue-100 uppercase tracking-wide">
-                    {selectedIds.length} Resource{selectedIds.length > 1 ? 's' : ''} Selected
-                  </span>
-                  <span className="text-[8px] text-zinc-500 font-black tracking-widest uppercase">CLUSTER_BULK_CONTEXT</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={handleBulkReboot}
-                  className="px-3.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-400 font-bold text-[10px] text-amber-300 uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  REBOOT SELECTED
-                </button>
-                <button 
-                  onClick={handleBulkDelete}
-                  className="px-3.5 py-1.5 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 hover:border-red-400 font-bold text-[10px] text-red-300 uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  DELETE SELECTED
-                </button>
-                <button 
-                  onClick={() => setSelectedIds([])}
-                  className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 font-bold text-[9px] text-zinc-400 hover:text-zinc-200 uppercase rounded-lg transition-all cursor-pointer"
-                >
-                  Clear Selection
-                </button>
-              </div>
-            </div>
-          )}
+          {/* New floating Bulk Actions Toolbar rendered out-of-flow at the bottom of the container */}
 
           <div className="grid grid-cols-1 gap-2">
             {filteredPods.map(pod => (

@@ -35,14 +35,15 @@ export default function PodStudio() {
     spinUpEnginePod, 
     pods, 
     addAgentLog,
-    rebootPod
+    rebootPod,
+    customEngineConfig
   } = useWorkspace();
 
   // Startup Choice Gate Launcher States
   const [isStudioBooted, setIsStudioBooted] = useState(false);
-  const [selectedLaunchEngine, setSelectedLaunchEngine] = useState<'three' | 'babylon' | 'playcanvas'>(() => {
+  const [selectedLaunchEngine, setSelectedLaunchEngine] = useState<'three' | 'babylon' | 'playcanvas' | 'custom'>(() => {
     const saved = localStorage.getItem('wonder_space_selected_engine');
-    return (saved === 'three' || saved === 'babylon' || saved === 'playcanvas') ? saved : 'three';
+    return (saved === 'three' || saved === 'babylon' || saved === 'playcanvas' || saved === 'custom') ? saved : 'three';
   });
 
   useEffect(() => {
@@ -194,6 +195,8 @@ export default function PodStudio() {
       scene.background = new THREE.Color('#12131a'); // Babylon classic dark violet space
     } else if (activeEngineId === 'playcanvas') {
       scene.background = new THREE.Color('#050608'); // PlayCanvas sleek engine carbon black
+    } else if (activeEngineId === 'custom') {
+      scene.background = new THREE.Color(customEngineConfig?.bg || '#05060a');
     } else {
       scene.background = new THREE.Color('#08090c'); // ThreeJS standard slate mesh space
     }
@@ -245,6 +248,17 @@ export default function PodStudio() {
       const orangeIndicator = new THREE.PointLight(new THREE.Color('#ff8400'), 8, 12);
       orangeIndicator.position.set(0, 2, 0);
       scene.add(orangeIndicator);
+    } else if (activeEngineId === 'custom') {
+      const ambientLight = new THREE.AmbientLight(new THREE.Color(customEngineConfig?.ambient || '#3b82f6'), 0.55);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      keyLight.position.set(5, 8, 6);
+      scene.add(keyLight);
+
+      const pointLight = new THREE.PointLight(new THREE.Color(customEngineConfig?.particleColor || '#00ffff'), 8, 12);
+      pointLight.position.set(0, 2, 0);
+      scene.add(pointLight);
     } else {
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
       scene.add(ambientLight);
@@ -312,14 +326,28 @@ export default function PodStudio() {
 
     // 6. Geometry builder
     let geometry: THREE.BufferGeometry;
-    if (geometryType === 'cube') {
-      geometry = new THREE.BoxGeometry(2, 2, 2);
-    } else if (geometryType === 'sphere') {
-      geometry = new THREE.SphereGeometry(1.3, 36, 18);
-    } else if (geometryType === 'cylinder') {
-      geometry = new THREE.CylinderGeometry(1, 1, 2.5, 32);
-    } else { // Torus
-      geometry = new THREE.TorusGeometry(1.2, 0.35, 16, 80);
+    if (activeEngineId === 'custom' && customEngineConfig) {
+      if (customEngineConfig.customShape === 'box') {
+        geometry = new THREE.BoxGeometry(2, 2, 2);
+      } else if (customEngineConfig.customShape === 'sphere') {
+        geometry = new THREE.SphereGeometry(1.3, 36, 18);
+      } else if (customEngineConfig.customShape === 'torus') {
+        geometry = new THREE.TorusGeometry(1.2, 0.35, 16, 80);
+      } else if (customEngineConfig.customShape === 'octahedron') {
+        geometry = new THREE.OctahedronGeometry(1.3, 0);
+      } else { // cone
+        geometry = new THREE.ConeGeometry(1.3, 2.5, 32);
+      }
+    } else {
+      if (geometryType === 'cube') {
+        geometry = new THREE.BoxGeometry(2, 2, 2);
+      } else if (geometryType === 'sphere') {
+        geometry = new THREE.SphereGeometry(1.3, 36, 18);
+      } else if (geometryType === 'cylinder') {
+        geometry = new THREE.CylinderGeometry(1, 1, 2.5, 32);
+      } else { // Torus
+        geometry = new THREE.TorusGeometry(1.2, 0.35, 16, 80);
+      }
     }
 
     // 7. Physical PBR Standard Material Setup
@@ -375,13 +403,35 @@ export default function PodStudio() {
       animationId = requestAnimationFrame(tick);
 
       // JS compiler runner simulations
-      if (scriptBinding === 'rotate_mesh.js') {
-        mesh.rotation.y += 0.015;
-        mesh.rotation.z += 0.005;
-      } else if (scriptBinding === 'pulse_wireframe.js') {
-        localTime += 0.045;
-        const multiplier = 1 + Math.sin(localTime) * 0.18;
-        mesh.scale.set(scaleX * multiplier, scaleY * multiplier, scaleZ * multiplier);
+      if (activeEngineId === 'custom' && customEngineConfig) {
+        try {
+          if (customEngineConfig.script) {
+            const win = window as any;
+            if (!win.__customScriptExecutor || win.__customScriptSource !== customEngineConfig.script) {
+              let code = customEngineConfig.script;
+              if (code.includes('function onUpdate')) {
+                code += "\n; if (typeof onUpdate === 'function') { onUpdate(time, mesh, scene); }";
+              }
+              win.__customScriptExecutor = new Function('time', 'mesh', 'scene', code);
+              win.__customScriptSource = customEngineConfig.script;
+            }
+            if (win.__customScriptExecutor) {
+              const stepTime = localTime * (customEngineConfig.speed || 1);
+              win.__customScriptExecutor(stepTime, mesh, scene);
+            }
+          }
+        } catch (scriptErr) {
+          // Silent catch to prevent crash loops
+        }
+      } else {
+        if (scriptBinding === 'rotate_mesh.js') {
+          mesh.rotation.y += 0.015;
+          mesh.rotation.z += 0.005;
+        } else if (scriptBinding === 'pulse_wireframe.js') {
+          localTime += 0.045;
+          const multiplier = 1 + Math.sin(localTime) * 0.18;
+          mesh.scale.set(scaleX * multiplier, scaleY * multiplier, scaleZ * multiplier);
+        }
       }
 
       // Rotate active float group elements
@@ -715,6 +765,7 @@ export default function PodStudio() {
                       { id: 'three', title: 'Three.js Core', desc: 'Direct WebGL hardware acceleration, true physical material simulations, robust lightings model.', label: 'ACTIVE' },
                       { id: 'babylon', title: 'Babylon.js Standard', desc: 'Complete feature-rich physically-based engine featuring hemispheric lighting and full debug layers.', label: 'STABLE' },
                       { id: 'playcanvas', title: 'PlayCanvas Frame', desc: 'High-performance WebGL context with customized high-contrast orange shaders and WASM acceleration.', label: 'EXPERIMENTAL' },
+                      { id: 'custom', title: 'Custom Sandbox Engine', desc: 'Fully programmable custom render loop. Design your own coordinates, physics values, and execute live source scripts in real-time.', label: 'PROGRAMMABLE' },
                     ].map(eng => (
                       <button
                         key={eng.id}

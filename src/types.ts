@@ -1,4 +1,22 @@
-export type ViewMode = 'pod-studio' | 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings' | 'infrastructure' | 'assistant' | 'plugins';
+export type ViewMode = 'pod-studio' | 'design' | 'engine' | 'spatial' | 'code' | 'pipeline' | 'settings' | 'infrastructure' | 'assistant' | 'plugins' | 'billing' | 'integrity';
+
+export interface WorkspaceError {
+  id: string;
+  section: string;
+  code: string;
+  message: string;
+  timestamp: number;
+  resolved: boolean;
+  resolutionInfo?: string;
+}
+
+export interface CheckpointStep {
+  id: string;
+  actionName: string;
+  timestamp: number;
+  viewMode: ViewMode;
+  stateDump: string;
+}
 
 export interface Pod {
   id: string;
@@ -36,7 +54,8 @@ export interface AgentLog {
 
 export interface WorkspaceConfig {
   theme: "brutalist" | "minimal" | "cyber" | "soft";
-  engine: "three" | "babylon" | "playcanvas" | "unity-webgl" | "unreal";
+  engine: "three" | "babylon" | "playcanvas" | "unity-webgl" | "unreal" | "custom";
+  aiProvider?: "spatial-v9" | "gemini-pro" | "opencode-ai";
   pipeline: {
     autoOptimize: boolean;
     format: "glb" | "gltf" | "usdz";
@@ -50,6 +69,7 @@ export interface WorkspaceConfig {
     anthropic?: string;
     perplexity?: string;
     groq?: string;
+    opencode?: string;
   };
 }
 
@@ -111,3 +131,16 @@ export interface WorkspaceSetup {
     scalingMetric?: string;
   };
 }
+
+export interface CustomEngineConfig {
+  bg: string;
+  ambient: string;
+  particleCount: number;
+  particleColor: string;
+  speed: number;
+  rotationSpeed: number;
+  glow: boolean;
+  script: string;
+  customShape: 'box' | 'sphere' | 'torus' | 'octahedron' | 'cone';
+}
+

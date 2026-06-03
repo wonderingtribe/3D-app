@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWorkspace } from '../WorkspaceContext';
-import { Settings, Shield, Cpu, Database, Link as LinkIcon, Palette, Zap, Globe, Key, Eye, EyeOff } from 'lucide-react';
+import { Settings, Shield, Cpu, Database, Link as LinkIcon, Palette, Zap, Globe, Key, Eye, EyeOff, BrainCircuit } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function ProjectSettings() {
@@ -24,6 +24,22 @@ export default function ProjectSettings() {
       {/* BYOK Section */}
       <div className="space-y-4">
         <label className="text-[10px] font-bold text-ui-text-muted uppercase flex items-center gap-2">
+          <BrainCircuit className="w-3 h-3 text-ui-accent" />
+          Intelligence Provider
+        </label>
+        <div className="bg-ui-panel/40 border border-ui-border rounded-xl p-3">
+          <select 
+            className="w-full bg-ui-bg border border-ui-border rounded-lg p-2 text-[11px] text-ui-text outline-none focus:border-ui-accent appearance-none"
+            value={config.aiProvider || 'spatial-v9'}
+            onChange={(e) => updateConfig({ aiProvider: e.target.value as any })}
+          >
+            <option value="spatial-v9">Spatial Kernel v9 (Default)</option>
+            <option value="gemini-pro">Gemini 1.5 Pro</option>
+            <option value="opencode-ai">OpenCode AI (Pro)</option>
+          </select>
+        </div>
+
+        <label className="text-[10px] font-bold text-ui-text-muted uppercase flex items-center gap-2 mt-4">
           <Key className="w-3 h-3 text-ui-accent" />
           BYOK (Bring Your Own Key)
         </label>
@@ -57,6 +73,12 @@ export default function ProjectSettings() {
             placeholder="gsk_..." 
             value={config.keys?.groq || ''} 
             onChange={(val) => updateConfig({ keys: { ...config.keys, groq: val } })}
+          />
+          <KeyInput 
+            label="OpenCode AI Key" 
+            placeholder="ocode-..." 
+            value={config.keys?.opencode || ''} 
+            onChange={(val) => updateConfig({ keys: { ...config.keys, opencode: val } })}
           />
           <p className="text-[8px] text-ui-text-muted/60 italic leading-tight">
             Keys are stored locally in the workspace session. They will be used to prioritize your own quotas.

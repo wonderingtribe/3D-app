@@ -23,7 +23,7 @@ export default function AgentSidebar() {
       <div className="p-4 border-b border-ui-border flex items-center justify-between bg-ui-panel/60">
         <div className="flex items-center gap-2">
            <BrainCircuit className="w-4 h-4 text-ui-accent" />
-           <label className="text-[10px] font-bold text-ui-text uppercase tracking-[0.2em]">Agent_Logos</label>
+           <label className="text-[10px] font-bold text-ui-text uppercase tracking-[0.2em]">Compiler_Action_Logs</label>
         </div>
         <button className="p-1 hover:bg-white/5 rounded text-ui-text-muted">
            <Settings className="w-3.5 h-3.5" />
@@ -65,7 +65,7 @@ export default function AgentSidebar() {
          <div className="relative group">
             <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ui-accent opacity-50 group-focus-within:opacity-100 transition-opacity" />
             <input 
-              placeholder="ASK AGENT TO REFACTOR..."
+              placeholder="EXECUTE COMPILER ACTION..."
               className="w-full bg-ui-bg border border-ui-outline rounded-xl py-2.5 pl-10 pr-10 text-[11px] text-ui-text outline-none focus:border-ui-accent transition-all uppercase font-bold tracking-wider placeholder:opacity-30"
             />
             <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-ui-accent rounded-lg text-white shadow-lg shadow-ui-accent/20 hover:scale-105 active:scale-95 transition-all">
@@ -73,7 +73,7 @@ export default function AgentSidebar() {
             </button>
          </div>
          <p className="mt-3 text-center text-[8px] text-ui-text-muted/40 uppercase font-bold tracking-tighter">
-            Architect empowered by Gemini 1.5 Pro
+            Spatial Engine Orchestrator v9
          </p>
       </div>
     </div>

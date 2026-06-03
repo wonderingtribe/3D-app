@@ -84,6 +84,30 @@ export default function SetupGate() {
     }
   };
 
+  const handleBypassSetup = () => {
+    completeSetup({
+      engineVersion: 'v3-stable',
+      editorMode: 'full',
+      deploymentTarget: 'k8s-pod',
+      hybridModules: ['wasi', 'assets', 'physics', 'mesh-opt'],
+      sources: {
+        engine: 'https://kernel.spatial.io',
+        assets: 'https://cdn.assets.io',
+        telemetry: 'wss://telemetry.cluster.local'
+      },
+      advancedTelemetry: true,
+      customBuildOptions: {
+        replicas: 3,
+        baseImage: 'node:20-alpine',
+        registryUrl: 'gcr.io/spatial-workspace/render-core:latest',
+        exposedPort: 3000,
+        mountPath: '/usr/src/app',
+        autoUpdate: true,
+        scalingMetric: 'CPU_utilization_80'
+      }
+    });
+  };
+
   const selectEngineWithAutoAdvance = (val: WorkspaceSetup['engineVersion']) => {
     setEngine(val);
     setTimeout(() => {
@@ -161,6 +185,13 @@ export default function SetupGate() {
            <span className="font-mono text-[10px] text-[#00b8ff] bg-[#00b8ff]/10 border border-[#00b8ff]/15 px-2 py-0.5 rounded-md tracking-wider">v9.0.Hybrid</span>
         </div>
         <div className="flex items-center gap-2">
+           <button 
+             onClick={handleBypassSetup} 
+             className="px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase font-mono bg-gradient-to-r from-[#00d4ff] to-[#a78bfa] hover:from-[#00c0fa] hover:to-[#9079ea] text-black shadow-lg shadow-[#00d4ff]/10 hover:shadow-[#00d4ff]/20 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+           >
+             Quick Launch IDE
+             <ChevronRight size={12} />
+           </button>
            <button onClick={() => setIsDocsOpen(true)} className="nav-btn-user hover:bg-[#00b8ff]/10 hover:text-[#00b8ff] hover:border-[#00b8ff]/30 transition-colors">Docs</button>
            <button onClick={() => setIsSettingsOpen(true)} className="nav-btn-user hover:bg-[#00b8ff]/10 hover:text-[#00b8ff] hover:border-[#00b8ff]/30 transition-colors">Settings</button>
         </div>
@@ -976,7 +1007,7 @@ export default function SetupGate() {
                     className="w-full bg-zinc-950 border border-white/5 rounded-lg p-2 font-mono text-xs text-zinc-500 cursor-not-allowed uppercase"
                   />
                   <span className="text-[8.5px] text-zinc-600 block leading-normal italic">
-                    ⚠ Port 3000 is reserved to bind container networks in accordance with AI Studio deployment proxies.
+                    ⚠ Port 3000 is reserved to bind container networks in accordance with the workspace development server proxy.
                   </span>
                 </div>
               </div>
